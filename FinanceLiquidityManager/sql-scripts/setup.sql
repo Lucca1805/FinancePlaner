@@ -103,7 +103,7 @@ CREATE TABLE finance.person (
     personID int  NOT NULL,
     email varchar(100)  NOT NULL,
     userName varchar(20)  NOT NULL,
-    password int  NOT NULL,
+    password varchar(60)  NOT NULL,
     CONSTRAINT person_pk PRIMARY KEY (personID)
 ) COMMENT 'Keeps information about each person that interacts with the bank';
 
@@ -146,6 +146,7 @@ CREATE TABLE finance.transaction (
     CONSTRAINT transaction_pk PRIMARY KEY (transactionID)
 ) COMMENT 'Keeps information about every transaction performed on the Bank';
 
+ALTER TABLE person MODIFY COLUMN personID INT AUTO_INCREMENT;
 -- foreign keys
 -- Reference: account_bank (table: account)
 ALTER TABLE finance.account ADD CONSTRAINT account_bank FOREIGN KEY account_bank (bank_bankID)
