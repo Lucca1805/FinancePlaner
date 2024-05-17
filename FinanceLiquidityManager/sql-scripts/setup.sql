@@ -5,14 +5,14 @@
 -- Table: account
 use finance;
 
-CREATE TABLE finance.Person (
+CREATE TABLE finance.person (
     PersonId int AUTO_INCREMENT PRIMARY KEY,
     Email varchar(100)  NOT NULL,
     UserName varchar(70)  NOT NULL,
     Password varchar(60)  NOT NULL
 ) COMMENT 'Keeps information about each person that interacts with the bank';
 
-CREATE TABLE finance.Accounts (
+CREATE TABLE finance.accounts (
     AccountId VARCHAR(40) PRIMARY KEY,
     Currency CHAR(3),
     AccountType VARCHAR(15),
@@ -29,7 +29,7 @@ CREATE TABLE finance.Accounts (
     FOREIGN KEY (Name) REFERENCES Person(PersonId)
 );
 
-CREATE TABLE finance.Bank (
+CREATE TABLE finance.bank (
     BankId INT AUTO_INCREMENT PRIMARY KEY,
     DisplayName VARCHAR(50)  NOT NULL,
     Description VARCHAR(50)  NOT NULL,
@@ -39,14 +39,14 @@ CREATE TABLE finance.Bank (
     OrderNumberPW INT  NOT NULL
 );
 
-CREATE TABLE finance.Bank_Account (
+CREATE TABLE finance.banck_account (
     BankId int AUTO_INCREMENT NOT NULL,
     AccountId VARCHAR(40) NOT NULL,
     PRIMARY KEY (BankId,AccountId)
 ); 
 
 -- Table: insurance
-CREATE TABLE finance.Insurance (
+CREATE TABLE finance.insurance (
     InsuranceId int AUTO_INCREMENT PRIMARY KEY,
     PolicyHolderId VARCHAR(40) NOT NULL,
     InsuranceType varchar(30)  NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE finance.Insurance (
 
 
 -- Table: loan
-CREATE TABLE finance.Loan (
+CREATE TABLE finance.loan (
     LoanId int AUTO_INCREMENT PRIMARY KEY,
     CreditorAccountId VARCHAR(40) NOT NULL,
     LoanType varchar(20)  NOT NULL,
@@ -100,7 +100,7 @@ BEGIN
     RETURN isValid;
 END */
 
-CREATE TABLE finance.Files (
+CREATE TABLE finance.files (
     FileId int AUTO_INCREMENT PRIMARY KEY,
     FileInfo longblob  NOT NULL,
     FileType VARCHAR(1) NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE finance.Files (
     CONSTRAINT CHK_FileType CHECK (FileType IN ('I', 'L'))  
 );
 
-CREATE TABLE finance.StandingOrders (
+CREATE TABLE finance.standingOrders (
     OrderId INT AUTO_INCREMENT PRIMARY KEY,
     CreditorAccountId VARCHAR(40) NOT NULL,
     Frequency VARCHAR(35) NOT NULL,
@@ -121,7 +121,7 @@ CREATE TABLE finance.StandingOrders (
     FOREIGN KEY (CreditorAccountId) REFERENCES Accounts(AccountId)
 );
 
-CREATE TABLE finance.Transactions (
+CREATE TABLE finance.transactions (
     TransactionId VARCHAR(40) PRIMARY KEY,
     AccountId VARCHAR(40) NOT NULL,
     CreditDebitIndicator VARCHAR(10),
@@ -159,7 +159,7 @@ CREATE TABLE finance.Transactions (
     FOREIGN KEY (AccountId) REFERENCES Accounts(AccountId)
 );
 
-INSERT INTO finance.Person (Email, UserName, Password) VALUES
+INSERT INTO finance.person (Email, UserName, Password) VALUES
 ('person1@example.com', 'user1', 'password1'),
 ('person2@example.com', 'user2', 'password2'),
 ('person3@example.com', 'user3', 'password3'),
@@ -172,7 +172,7 @@ INSERT INTO finance.Person (Email, UserName, Password) VALUES
 ('person10@example.com', 'user10', 'password10');
 
 -- Insert Accounts for each Person
-INSERT INTO finance.Accounts (AccountId, Currency, AccountType, AccountSubType, Nickname, SchemeName, Identification, Name, SecondaryIdentification) VALUES
+INSERT INTO finance.accounts (AccountId, Currency, AccountType, AccountSubType, Nickname, SchemeName, Identification, Name, SecondaryIdentification) VALUES
 ('ACC1001', 'USD', 'Personal', 'CurrentAccount', 'Person 1 Checking', 'US.RoutingNumberAccountNumber', '1234567890', 1, NULL),
 ('ACC1002', 'USD', 'Business', 'CurrentAccount', 'Person 1 Business', 'US.RoutingNumberAccountNumber', '0987654321', 1, NULL),
 ('ACC1003', 'EUR', 'Personal', 'Savings', 'Person 1 Savings', 'UK.OBIE.IBAN', 'GB12BARC20201512345678', 1, NULL),
@@ -215,7 +215,7 @@ INSERT INTO finance.Accounts (AccountId, Currency, AccountType, AccountSubType, 
 ('ACC1040', 'GBP', 'Personal', 'Loan', 'Person 10 Loan', 'UK.OBIE.IBAN', 'GB12BARC20201501234568', 10, NULL);
 
 -- Insert 5 Banks for each Person
-INSERT INTO finance.Bank (DisplayName, Description, Country, BIC, OrderNumber, OrderNumberPW) VALUES
+INSERT INTO finance.bank (DisplayName, Description, Country, BIC, OrderNumber, OrderNumberPW) VALUES
 ('Bank of America', 'Leading bank in the USA', 'United States', 'BOFAUS3N', '12345', 1234),
 ('Chase Bank', 'Major American bank', 'United States', 'CHASUS33', '54321', 4321),
 ('Wells Fargo', 'Major American bank', 'United States', 'WFBIUS6S', '67890', 5678),
@@ -223,7 +223,7 @@ INSERT INTO finance.Bank (DisplayName, Description, Country, BIC, OrderNumber, O
 ('Deutsche Bank', 'Major German bank', 'Germany', 'DEUTDEFF', '12134', 1221);
 
 -- Insert Bank Account relations
-INSERT INTO finance.Bank_Account (BankId, AccountId) VALUES
+INSERT INTO finance.bank_account (BankId, AccountId) VALUES
 (1, 'ACC1001'),
 (1, 'ACC1002'),
 (2, 'ACC1003'),
@@ -236,7 +236,7 @@ INSERT INTO finance.Bank_Account (BankId, AccountId) VALUES
 (5, 'ACC1010'); 
 
 -- Insert 3 Insurances per User
-INSERT INTO finance.Insurance (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country) VALUES
+INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country) VALUES
 ('ACC1001', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA'),
 ('ACC1002', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA'),
 ('ACC1003', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany'),
@@ -251,7 +251,7 @@ INSERT INTO finance.Insurance (PolicyHolderId, InsuranceType, PaymentInstalmentA
 ('ACC1012', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany');
 
 -- Insert Loans per User (3 loans per user)
-INSERT INTO finance.Loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency) VALUES
+INSERT INTO finance.loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency) VALUES
 ('ACC1001', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly'),
 ('ACC1002', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly'),
 ('ACC1003', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly'),
@@ -264,7 +264,7 @@ INSERT INTO finance.Loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurre
 ('ACC1010', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly');
 
 -- Insert 50 Standing Orders
-INSERT INTO finance.StandingOrders (CreditorAccountId, Frequency, NumberOfPayments, FirstPaymentDateTime, FinalPaymentDateTime, Reference) VALUES
+INSERT INTO finance.standingOrders (CreditorAccountId, Frequency, NumberOfPayments, FirstPaymentDateTime, FinalPaymentDateTime, Reference) VALUES
 ('ACC1001', 'Monthly', 12, '2023-02-01 10:00:00', '2024-02-01 10:00:00', 'Subscription Payment'),
 ('ACC1002', 'Quarterly', 8, '2023-01-15 12:00:00', '2024-01-15 12:00:00', 'Service Payment'),
 ('ACC1003', 'Monthly', 12, '2023-03-01 10:00:00', '2024-03-01 10:00:00', 'Utility Payment'),
@@ -311,7 +311,7 @@ INSERT INTO finance.StandingOrders (CreditorAccountId, Frequency, NumberOfPaymen
 
 -- Insert  Transactions
 -- Insert into Transactions with TransactionId
-INSERT INTO finance.Transactions (
+INSERT INTO finance.transactions (
     TransactionId, AccountId, CreditDebitIndicator, Status, BookingDateTime, ValueDateTime, 
     Amount, AmountCurrency, TransactionCode, TransactionIssuer, 
     TransactionInformation, MerchantName, ExchangeRate, SourceCurrency, TargetCurrency, 

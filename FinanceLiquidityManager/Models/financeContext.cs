@@ -18,13 +18,12 @@ namespace FinanceLiquidityManager.Models
 
         public virtual DbSet<Account> Accounts { get; set; } = null!;
         public virtual DbSet<Bank> Banks { get; set; } = null!;
+        public virtual DbSet<BankAccount> BankAccounts { get; set; } = null!;
         public virtual DbSet<File> Files { get; set; } = null!;
         public virtual DbSet<Insurance> Insurances { get; set; } = null!;
-        public virtual DbSet<InsuranceCompany> InsuranceCompanies { get; set; } = null!;
         public virtual DbSet<Loan> Loans { get; set; } = null!;
-        public virtual DbSet<LoanPayment> LoanPayments { get; set; } = null!;
         public virtual DbSet<Person> People { get; set; } = null!;
-        public virtual DbSet<SavingPlan> SavingPlans { get; set; } = null!;
+        public virtual DbSet<StandingOrder> StandingOrders { get; set; } = null!;
         public virtual DbSet<Transaction> Transactions { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -32,7 +31,7 @@ namespace FinanceLiquidityManager.Models
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
-                optionsBuilder.UseMySql("server=localhost;database=finance;user=root;password=Root0++", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.22-mysql"));
+                optionsBuilder.UseMySql("server=localhost;port=3306;database=finance;user=root;password=Root0++", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.22-mysql"));
             }
         }
 
@@ -43,478 +42,257 @@ namespace FinanceLiquidityManager.Models
 
             modelBuilder.Entity<Account>(entity =>
             {
-                entity.ToTable("account");
+                entity.HasIndex(e => e.Name, "Name");
 
-                entity.HasComment("Keeps information about the different accounts each customer or group of customers can have in the bank");
+                entity.Property(e => e.AccountId).HasMaxLength(40);
 
-                entity.HasIndex(e => new { e.AccountType, e.AccountNumber }, "account_ak_1")
-                    .IsUnique();
+                entity.Property(e => e.AccountSubType).HasMaxLength(20);
 
-                entity.HasIndex(e => e.BankBankId, "account_bank");
+                entity.Property(e => e.AccountType).HasMaxLength(15);
 
-                entity.HasIndex(e => e.PersonPersonId, "person_account");
+                entity.Property(e => e.Currency)
+                    .HasMaxLength(3)
+                    .IsFixedLength();
 
-                entity.Property(e => e.AccountId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("AccountID");
+                entity.Property(e => e.Identification).HasMaxLength(256);
 
-                entity.Property(e => e.AccountNumber).HasMaxLength(20);
+                entity.Property(e => e.Nickname).HasMaxLength(70);
 
-                entity.Property(e => e.AccountType).HasMaxLength(20);
+                entity.Property(e => e.SchemeName).HasMaxLength(50);
 
-                entity.Property(e => e.BankBankId).HasColumnName("bank_bankID");
+                entity.Property(e => e.SecondaryIdentification).HasMaxLength(34);
 
-                entity.Property(e => e.CurrentBalance).HasPrecision(10, 2);
-
-                entity.Property(e => e.PersonPersonId).HasColumnName("person_personID");
-
-                entity.HasOne(d => d.BankBank)
+                entity.HasOne(d => d.NameNavigation)
                     .WithMany(p => p.Accounts)
-                    .HasForeignKey(d => d.BankBankId)
+                    .HasForeignKey(d => d.Name)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("account_bank");
-
-                entity.HasOne(d => d.PersonPerson)
-                    .WithMany(p => p.Accounts)
-                    .HasForeignKey(d => d.PersonPersonId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("person_account");
+                    .HasConstraintName("Accounts_ibfk_1");
             });
 
             modelBuilder.Entity<Bank>(entity =>
             {
-                entity.ToTable("bank");
+                entity.ToTable("Bank");
 
-                entity.Property(e => e.BankId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("bankID");
+                entity.HasIndex(e => e.Bic, "BIC")
+                    .IsUnique();
 
-                entity.Property(e => e.Bic).HasColumnName("BIC");
+                entity.Property(e => e.Bic)
+                    .HasMaxLength(11)
+                    .HasColumnName("BIC");
 
-                entity.Property(e => e.Country)
-                    .HasMaxLength(50)
-                    .HasColumnName("country");
+                entity.Property(e => e.Country).HasMaxLength(50);
 
-                entity.Property(e => e.Description)
-                    .HasMaxLength(50)
-                    .HasColumnName("description");
+                entity.Property(e => e.Description).HasMaxLength(50);
 
-                entity.Property(e => e.DisplayName)
-                    .HasMaxLength(50)
-                    .HasColumnName("displayName");
+                entity.Property(e => e.DisplayName).HasMaxLength(50);
 
                 entity.Property(e => e.OrderNumber)
-                    .HasColumnName("orderNumber")
+                    .HasMaxLength(70)
                     .HasComment("VerfÃ¼gernummer");
 
-                entity.Property(e => e.OrderNumberPw).HasColumnName("orderNumberPW");
+                entity.Property(e => e.OrderNumberPw).HasColumnName("OrderNumberPW");
+            });
+
+            modelBuilder.Entity<BankAccount>(entity =>
+            {
+                entity.HasKey(e => new { e.BankId, e.AccountId })
+                    .HasName("PRIMARY")
+                    .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+
+                entity.ToTable("Bank_Account");
+
+                entity.Property(e => e.BankId).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.AccountId).HasMaxLength(40);
             });
 
             modelBuilder.Entity<File>(entity =>
             {
-                entity.ToTable("files");
+                entity.HasIndex(e => e.RefId, "RefID");
 
-                entity.HasIndex(e => e.InsuranceInsuranceId, "files_insurance");
+                entity.Property(e => e.FileType).HasMaxLength(1);
 
-                entity.HasIndex(e => e.LoanLoanId, "files_loan");
+                entity.Property(e => e.RefId).HasColumnName("RefID");
 
-                entity.HasIndex(e => e.TransactionTransactionId, "files_transaction");
-
-                entity.Property(e => e.FileId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("fileID");
-
-                entity.Property(e => e.FileInfo).HasColumnName("fileInfo");
-
-                entity.Property(e => e.FileType)
-                    .HasMaxLength(20)
-                    .HasColumnName("fileType");
-
-                entity.Property(e => e.InsuranceInsuranceId).HasColumnName("insurance_insuranceID");
-
-                entity.Property(e => e.LoanLoanId).HasColumnName("loan_loanID");
-
-                entity.Property(e => e.TransactionTransactionId).HasColumnName("transaction_transactionID");
-
-                entity.HasOne(d => d.InsuranceInsurance)
+                entity.HasOne(d => d.Ref)
                     .WithMany(p => p.Files)
-                    .HasForeignKey(d => d.InsuranceInsuranceId)
+                    .HasForeignKey(d => d.RefId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("files_insurance");
+                    .HasConstraintName("Files_ibfk_2");
 
-                entity.HasOne(d => d.LoanLoan)
+                entity.HasOne(d => d.RefNavigation)
                     .WithMany(p => p.Files)
-                    .HasForeignKey(d => d.LoanLoanId)
+                    .HasForeignKey(d => d.RefId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("files_loan");
-
-                entity.HasOne(d => d.TransactionTransaction)
-                    .WithMany(p => p.Files)
-                    .HasForeignKey(d => d.TransactionTransactionId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("files_transaction");
+                    .HasConstraintName("Files_ibfk_1");
             });
 
             modelBuilder.Entity<Insurance>(entity =>
             {
-                entity.ToTable("insurance");
+                entity.ToTable("Insurance");
 
-                entity.HasIndex(e => e.InsuranceCompanyInsuranceCompanyId, "insurance_insuranceCompany");
+                entity.HasIndex(e => e.PolicyHolderId, "PolicyHolderId");
 
-                entity.HasIndex(e => e.TransactionTransactionId, "insurance_transaction");
+                entity.Property(e => e.Country).HasMaxLength(10);
 
-                entity.HasIndex(e => e.PersonPersonId, "person_insurance");
+                entity.Property(e => e.DateClosed).HasColumnType("timestamp");
 
-                entity.Property(e => e.InsuranceId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("insuranceID");
+                entity.Property(e => e.DateOpened).HasColumnType("timestamp");
 
-                entity.Property(e => e.DateClosed)
-                    .HasColumnType("datetime")
-                    .HasColumnName("dateClosed");
+                entity.Property(e => e.Description).HasMaxLength(20);
 
-                entity.Property(e => e.DateOpened)
-                    .HasColumnType("datetime")
-                    .HasColumnName("dateOpened");
+                entity.Property(e => e.InsuranceCompany).HasMaxLength(20);
 
-                entity.Property(e => e.InsuranceCompanyInsuranceCompanyId).HasColumnName("insuranceCompany_insuranceCompanyID");
+                entity.Property(e => e.InsuranceType).HasMaxLength(30);
 
-                entity.Property(e => e.InsuranceState).HasColumnName("insuranceState");
+                entity.Property(e => e.PaymentAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.InsuranceType)
-                    .HasMaxLength(30)
-                    .HasColumnName("insuranceType");
+                entity.Property(e => e.PaymentInstalmentAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.PaymentAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("paymentAmount");
+                entity.Property(e => e.PaymentInstalmentUnitCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.PaymentInstalment)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("paymentInstalment");
+                entity.Property(e => e.PaymentUnitCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.PaymentInstalmentUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("paymentInstalmentUnit");
+                entity.Property(e => e.PolicyHolderId).HasMaxLength(40);
 
-                entity.Property(e => e.PaymentUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("paymentUnit");
-
-                entity.Property(e => e.PersonPersonId).HasColumnName("person_personID");
-
-                entity.Property(e => e.Polizze).HasColumnName("polizze");
-
-                entity.Property(e => e.TransactionTransactionId).HasColumnName("transaction_transactionID");
-
-                entity.HasOne(d => d.InsuranceCompanyInsuranceCompany)
+                entity.HasOne(d => d.PolicyHolder)
                     .WithMany(p => p.Insurances)
-                    .HasForeignKey(d => d.InsuranceCompanyInsuranceCompanyId)
+                    .HasForeignKey(d => d.PolicyHolderId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("insurance_insuranceCompany");
-
-                entity.HasOne(d => d.PersonPerson)
-                    .WithMany(p => p.Insurances)
-                    .HasForeignKey(d => d.PersonPersonId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("person_insurance");
-
-                entity.HasOne(d => d.TransactionTransaction)
-                    .WithMany(p => p.Insurances)
-                    .HasForeignKey(d => d.TransactionTransactionId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("insurance_transaction");
-            });
-
-            modelBuilder.Entity<InsuranceCompany>(entity =>
-            {
-                entity.ToTable("insuranceCompany");
-
-                entity.Property(e => e.InsuranceCompanyId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("insuranceCompanyID");
-
-                entity.Property(e => e.Country)
-                    .HasMaxLength(10)
-                    .HasColumnName("country");
-
-                entity.Property(e => e.Description)
-                    .HasMaxLength(20)
-                    .HasColumnName("description");
-
-                entity.Property(e => e.InsuranceCompany1)
-                    .HasMaxLength(20)
-                    .HasColumnName("insuranceCompany");
+                    .HasConstraintName("Insurance_ibfk_1");
             });
 
             modelBuilder.Entity<Loan>(entity =>
             {
-                entity.ToTable("loan");
+                entity.ToTable("Loan");
 
                 entity.HasComment("Keeps information about the different loans that the bank grants to customers");
 
-                entity.Property(e => e.LoanId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("loanID");
+                entity.HasIndex(e => e.CreditorAccountId, "CreditorAccountId");
 
-                entity.Property(e => e.EndDate).HasColumnName("endDate");
+                entity.Property(e => e.CreditorAccountId).HasMaxLength(40);
 
-                entity.Property(e => e.InterestRate)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("interestRate");
+                entity.Property(e => e.EndDate).HasColumnType("timestamp");
 
-                entity.Property(e => e.InterestRateUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("interestRateUnit");
-
-                entity.Property(e => e.LoanAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("loanAmount");
-
-                entity.Property(e => e.LoanStatus)
-                    .HasMaxLength(20)
-                    .HasColumnName("loanStatus");
-
-                entity.Property(e => e.LoanType)
-                    .HasMaxLength(20)
-                    .HasColumnName("loanType");
-
-                entity.Property(e => e.LoanUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("loanUnit");
-
-                entity.Property(e => e.PaymentInterval)
-                    .HasMaxLength(20)
-                    .HasColumnName("paymentInterval")
+                entity.Property(e => e.Frequency)
+                    .HasMaxLength(35)
                     .HasComment("Zahlungsinterval");
 
-                entity.Property(e => e.StartDate).HasColumnName("startDate");
-            });
+                entity.Property(e => e.InterestRate).HasPrecision(13, 5);
 
-            modelBuilder.Entity<LoanPayment>(entity =>
-            {
-                entity.ToTable("loanPayment");
+                entity.Property(e => e.InterestRateUnitCurrency).HasMaxLength(3);
 
-                entity.HasComment("Keeps information about each scheduled Loan Payment");
+                entity.Property(e => e.LoanAmount).HasPrecision(13, 5);
 
-                entity.HasIndex(e => e.LoanLoanId, "loanPayment_loan");
+                entity.Property(e => e.LoanStatus).HasMaxLength(20);
 
-                entity.Property(e => e.LoanPaymentId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("loanPaymentID");
+                entity.Property(e => e.LoanType).HasMaxLength(20);
 
-                entity.Property(e => e.InterestAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("interestAmount");
+                entity.Property(e => e.LoanUnitCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.LoanLoanId).HasColumnName("loan_loanID");
+                entity.Property(e => e.StartDate).HasColumnType("timestamp");
 
-                entity.Property(e => e.PaidAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("paidAmount");
-
-                entity.Property(e => e.PaidDate).HasColumnName("paidDate");
-
-                entity.Property(e => e.PaymentAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("paymentAmount");
-
-                entity.Property(e => e.PaymentType)
-                    .HasMaxLength(20)
-                    .HasColumnName("paymentType");
-
-                entity.Property(e => e.PrincipalAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("principalAmount");
-
-                entity.Property(e => e.ScheduledPaymentDate).HasColumnName("scheduledPaymentDate");
-
-                entity.HasOne(d => d.LoanLoan)
-                    .WithMany(p => p.LoanPayments)
-                    .HasForeignKey(d => d.LoanLoanId)
+                entity.HasOne(d => d.CreditorAccount)
+                    .WithMany(p => p.Loans)
+                    .HasForeignKey(d => d.CreditorAccountId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("loanPayment_loan");
+                    .HasConstraintName("Loan_ibfk_1");
             });
 
             modelBuilder.Entity<Person>(entity =>
             {
-                entity.ToTable("person");
+                entity.ToTable("Person");
 
                 entity.HasComment("Keeps information about each person that interacts with the bank");
 
-                entity.Property(e => e.PersonId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("personID");
+                entity.Property(e => e.Email).HasMaxLength(100);
 
-                entity.Property(e => e.Email)
-                    .HasMaxLength(100)
-                    .HasColumnName("email");
+                entity.Property(e => e.Password).HasMaxLength(60);
 
-                entity.Property(e => e.Password).HasColumnName("password");
-
-                entity.Property(e => e.UserName)
-                    .HasMaxLength(20)
-                    .HasColumnName("userName");
-
-                entity.HasMany(d => d.LoanLoans)
-                    .WithMany(p => p.PersonPeople)
-                    .UsingEntity<Dictionary<string, object>>(
-                        "PersonLoan",
-                        l => l.HasOne<Loan>().WithMany().HasForeignKey("LoanLoanId").OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("person_loan_loan"),
-                        r => r.HasOne<Person>().WithMany().HasForeignKey("PersonPersonId").OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("person_loan_person"),
-                        j =>
-                        {
-                            j.HasKey("PersonPersonId", "LoanLoanId").HasName("PRIMARY").HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
-
-                            j.ToTable("person_loan");
-
-                            j.HasIndex(new[] { "LoanLoanId" }, "person_loan_loan");
-
-                            j.IndexerProperty<int>("PersonPersonId").HasColumnName("person_personID");
-
-                            j.IndexerProperty<int>("LoanLoanId").HasColumnName("loan_loanID");
-                        });
+                entity.Property(e => e.UserName).HasMaxLength(70);
             });
 
-            modelBuilder.Entity<SavingPlan>(entity =>
+            modelBuilder.Entity<StandingOrder>(entity =>
             {
-                entity.ToTable("savingPlan");
+                entity.HasKey(e => e.OrderId)
+                    .HasName("PRIMARY");
 
-                entity.HasIndex(e => e.BankBankId, "savingPlan_bank");
+                entity.HasIndex(e => e.CreditorAccountId, "CreditorAccountId");
 
-                entity.HasIndex(e => e.InsuranceCompanyInsuranceCompanyId, "savingPlan_insuranceCompany");
+                entity.Property(e => e.CreditorAccountId).HasMaxLength(40);
 
-                entity.HasIndex(e => e.PersonPersonId, "savingPlan_person");
+                entity.Property(e => e.FinalPaymentDateTime).HasColumnType("timestamp");
 
-                entity.HasIndex(e => e.TransactionTransactionId, "savingPlan_transaction");
+                entity.Property(e => e.FirstPaymentDateTime).HasColumnType("timestamp");
 
-                entity.Property(e => e.SavingPlanId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("savingPlanID");
+                entity.Property(e => e.Frequency).HasMaxLength(35);
 
-                entity.Property(e => e.BankBankId).HasColumnName("bank_bankID");
+                entity.Property(e => e.Reference).HasMaxLength(35);
 
-                entity.Property(e => e.ClosedDate)
-                    .HasColumnType("datetime")
-                    .HasColumnName("closedDate");
-
-                entity.Property(e => e.CurrentAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("currentAmount");
-
-                entity.Property(e => e.CurrentAmountUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("currentAmountUnit");
-
-                entity.Property(e => e.InsuranceCompanyInsuranceCompanyId).HasColumnName("insuranceCompany_insuranceCompanyID");
-
-                entity.Property(e => e.OpenDate)
-                    .HasColumnType("datetime")
-                    .HasColumnName("openDate");
-
-                entity.Property(e => e.PaymentInterval)
-                    .HasMaxLength(20)
-                    .HasColumnName("paymentInterval")
-                    .HasComment("monatlich, jÃ¤hrlich, wÃ¶chentlich, quartalsweise");
-
-                entity.Property(e => e.PersonPersonId).HasColumnName("person_personID");
-
-                entity.Property(e => e.State).HasColumnName("state");
-
-                entity.Property(e => e.TargetAmount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("targetAmount");
-
-                entity.Property(e => e.TargetAmountUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("targetAmountUnit");
-
-                entity.Property(e => e.TargetGoal)
-                    .HasMaxLength(20)
-                    .HasColumnName("targetGoal");
-
-                entity.Property(e => e.TransactionTransactionId).HasColumnName("transaction_transactionID");
-
-                entity.HasOne(d => d.BankBank)
-                    .WithMany(p => p.SavingPlans)
-                    .HasForeignKey(d => d.BankBankId)
+                entity.HasOne(d => d.CreditorAccount)
+                    .WithMany(p => p.StandingOrders)
+                    .HasForeignKey(d => d.CreditorAccountId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("savingPlan_bank");
-
-                entity.HasOne(d => d.InsuranceCompanyInsuranceCompany)
-                    .WithMany(p => p.SavingPlans)
-                    .HasForeignKey(d => d.InsuranceCompanyInsuranceCompanyId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("savingPlan_insuranceCompany");
-
-                entity.HasOne(d => d.PersonPerson)
-                    .WithMany(p => p.SavingPlans)
-                    .HasForeignKey(d => d.PersonPersonId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("savingPlan_person");
-
-                entity.HasOne(d => d.TransactionTransaction)
-                    .WithMany(p => p.SavingPlans)
-                    .HasForeignKey(d => d.TransactionTransactionId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("savingPlan_transaction");
+                    .HasConstraintName("StandingOrders_ibfk_1");
             });
 
             modelBuilder.Entity<Transaction>(entity =>
             {
-                entity.ToTable("transaction");
+                entity.HasIndex(e => e.AccountId, "AccountId");
 
-                entity.HasComment("Keeps information about every transaction performed on the Bank");
+                entity.Property(e => e.TransactionId).HasMaxLength(40);
 
-                entity.HasIndex(e => e.AccountAccountId, "transaction_account");
+                entity.Property(e => e.AccountId).HasMaxLength(40);
 
-                entity.HasIndex(e => e.LoanPaymentLoanPaymentId, "transaction_loanPayment");
+                entity.Property(e => e.Amount).HasPrecision(13, 5);
 
-                entity.HasIndex(e => e.PersonPersonId, "transaction_person");
+                entity.Property(e => e.AmountCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.TransactionId)
-                    .ValueGeneratedNever()
-                    .HasColumnName("transactionID");
+                entity.Property(e => e.BalanceAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.AccountAccountId).HasColumnName("account_AccountID");
+                entity.Property(e => e.BalanceCreditDebitIndicator).HasMaxLength(10);
 
-                entity.Property(e => e.Amount)
-                    .HasPrecision(10, 2)
-                    .HasColumnName("amount");
+                entity.Property(e => e.BalanceCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.AmountUnit)
-                    .HasMaxLength(5)
-                    .HasColumnName("amountUnit");
+                entity.Property(e => e.BookingDateTime).HasColumnType("timestamp");
 
-                entity.Property(e => e.LoanPaymentLoanPaymentId).HasColumnName("loanPayment_loanPaymentID");
+                entity.Property(e => e.ChargeAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.PersonPersonId).HasColumnName("person_personID");
+                entity.Property(e => e.ChargeCurrency).HasMaxLength(3);
 
-                entity.Property(e => e.TransactionDate)
-                    .HasColumnType("datetime")
-                    .HasColumnName("transactionDate");
+                entity.Property(e => e.CreditDebitIndicator).HasMaxLength(10);
 
-                entity.Property(e => e.TransactionType)
-                    .HasMaxLength(20)
-                    .HasColumnName("transactionType");
+                entity.Property(e => e.ExchangeRate).HasPrecision(20, 10);
 
-                entity.HasOne(d => d.AccountAccount)
+                entity.Property(e => e.InstructedAmount).HasPrecision(13, 5);
+
+                entity.Property(e => e.InstructedCurrency).HasMaxLength(3);
+
+                entity.Property(e => e.MerchantName).HasMaxLength(350);
+
+                entity.Property(e => e.SourceCurrency).HasMaxLength(3);
+
+                entity.Property(e => e.Status).HasMaxLength(20);
+
+                entity.Property(e => e.SupplementaryData).HasMaxLength(40);
+
+                entity.Property(e => e.TargetCurrency).HasMaxLength(3);
+
+                entity.Property(e => e.TransactionCode).HasMaxLength(35);
+
+                entity.Property(e => e.TransactionInformation).HasMaxLength(500);
+
+                entity.Property(e => e.TransactionIssuer).HasMaxLength(35);
+
+                entity.Property(e => e.UnitCurrency).HasMaxLength(3);
+
+                entity.Property(e => e.ValueDateTime).HasColumnType("timestamp");
+
+                entity.HasOne(d => d.Account)
                     .WithMany(p => p.Transactions)
-                    .HasForeignKey(d => d.AccountAccountId)
+                    .HasForeignKey(d => d.AccountId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("transaction_account");
-
-                entity.HasOne(d => d.LoanPaymentLoanPayment)
-                    .WithMany(p => p.Transactions)
-                    .HasForeignKey(d => d.LoanPaymentLoanPaymentId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("transaction_loanPayment");
-
-                entity.HasOne(d => d.PersonPerson)
-                    .WithMany(p => p.Transactions)
-                    .HasForeignKey(d => d.PersonPersonId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("transaction_person");
+                    .HasConstraintName("Transactions_ibfk_1");
             });
 
             OnModelCreatingPartial(modelBuilder);

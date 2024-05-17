@@ -11,22 +11,13 @@ namespace FinanceLiquidityManager.Models
         public Person()
         {
             Accounts = new HashSet<Account>();
-            Insurances = new HashSet<Insurance>();
-            SavingPlans = new HashSet<SavingPlan>();
-            Transactions = new HashSet<Transaction>();
-            LoanLoans = new HashSet<Loan>();
         }
 
         public int PersonId { get; set; }
         public string Email { get; set; } = null!;
         public string UserName { get; set; } = null!;
-        public string Password { get; set; }
+        public string Password { get; set; } = null!;
 
         public virtual ICollection<Account> Accounts { get; set; }
-        public virtual ICollection<Insurance> Insurances { get; set; }
-        public virtual ICollection<SavingPlan> SavingPlans { get; set; }
-        public virtual ICollection<Transaction> Transactions { get; set; }
-
-        public virtual ICollection<Loan> LoanLoans { get; set; }
     }
 }

@@ -11,27 +11,24 @@ namespace FinanceLiquidityManager.Models
         public Loan()
         {
             Files = new HashSet<File>();
-            LoanPayments = new HashSet<LoanPayment>();
-            PersonPeople = new HashSet<Person>();
         }
 
         public int LoanId { get; set; }
+        public string CreditorAccountId { get; set; } = null!;
         public string LoanType { get; set; } = null!;
         public decimal LoanAmount { get; set; }
-        public string LoanUnit { get; set; } = null!;
+        public string? LoanUnitCurrency { get; set; }
         public decimal InterestRate { get; set; }
-        public string InterestRateUnit { get; set; } = null!;
-        public DateOnly StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
+        public string? InterestRateUnitCurrency { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public string LoanStatus { get; set; } = null!;
         /// <summary>
         /// Zahlungsinterval
         /// </summary>
-        public string PaymentInterval { get; set; } = null!;
+        public string Frequency { get; set; } = null!;
 
+        public virtual Account CreditorAccount { get; set; } = null!;
         public virtual ICollection<File> Files { get; set; }
-        public virtual ICollection<LoanPayment> LoanPayments { get; set; }
-
-        public virtual ICollection<Person> PersonPeople { get; set; }
     }
 }

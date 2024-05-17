@@ -3,32 +3,33 @@ using System.Collections.Generic;
 
 namespace FinanceLiquidityManager.Models
 {
-    /// <summary>
-    /// Keeps information about every transaction performed on the Bank
-    /// </summary>
     public partial class Transaction
     {
-        public Transaction()
-        {
-            Files = new HashSet<File>();
-            Insurances = new HashSet<Insurance>();
-            SavingPlans = new HashSet<SavingPlan>();
-        }
-
-        public int TransactionId { get; set; }
-        public string TransactionType { get; set; } = null!;
+        public string TransactionId { get; set; } = null!;
+        public string AccountId { get; set; } = null!;
+        public string? CreditDebitIndicator { get; set; }
+        public string? Status { get; set; }
+        public DateTime BookingDateTime { get; set; }
+        public DateTime? ValueDateTime { get; set; }
         public decimal Amount { get; set; }
-        public string AmountUnit { get; set; } = null!;
-        public DateTime TransactionDate { get; set; }
-        public int PersonPersonId { get; set; }
-        public int AccountAccountId { get; set; }
-        public int LoanPaymentLoanPaymentId { get; set; }
+        public string AmountCurrency { get; set; } = null!;
+        public string TransactionCode { get; set; } = null!;
+        public string? TransactionIssuer { get; set; }
+        public string? TransactionInformation { get; set; }
+        public string? MerchantName { get; set; }
+        public decimal? ExchangeRate { get; set; }
+        public string? SourceCurrency { get; set; }
+        public string? TargetCurrency { get; set; }
+        public string? UnitCurrency { get; set; }
+        public decimal? InstructedAmount { get; set; }
+        public string? InstructedCurrency { get; set; }
+        public string? BalanceCreditDebitIndicator { get; set; }
+        public decimal BalanceAmount { get; set; }
+        public string BalanceCurrency { get; set; } = null!;
+        public decimal? ChargeAmount { get; set; }
+        public string ChargeCurrency { get; set; } = null!;
+        public string? SupplementaryData { get; set; }
 
-        public virtual Account AccountAccount { get; set; } = null!;
-        public virtual LoanPayment LoanPaymentLoanPayment { get; set; } = null!;
-        public virtual Person PersonPerson { get; set; } = null!;
-        public virtual ICollection<File> Files { get; set; }
-        public virtual ICollection<Insurance> Insurances { get; set; }
-        public virtual ICollection<SavingPlan> SavingPlans { get; set; }
+        public virtual Account Account { get; set; } = null!;
     }
 }

@@ -11,22 +11,21 @@ namespace FinanceLiquidityManager.Models
         }
 
         public int InsuranceId { get; set; }
+        public string PolicyHolderId { get; set; } = null!;
         public string InsuranceType { get; set; } = null!;
-        public decimal PaymentInstalment { get; set; }
-        public string PaymentInstalmentUnit { get; set; } = null!;
+        public decimal PaymentInstalmentAmount { get; set; }
+        public string? PaymentInstalmentUnitCurrency { get; set; }
         public DateTime DateOpened { get; set; }
+        public DateTime? DateClosed { get; set; }
         public bool InsuranceState { get; set; }
         public decimal PaymentAmount { get; set; }
-        public DateTime? DateClosed { get; set; }
-        public string PaymentUnit { get; set; } = null!;
+        public string? PaymentUnitCurrency { get; set; }
         public byte[] Polizze { get; set; } = null!;
-        public int InsuranceCompanyInsuranceCompanyId { get; set; }
-        public int PersonPersonId { get; set; }
-        public int TransactionTransactionId { get; set; }
+        public string InsuranceCompany { get; set; } = null!;
+        public string? Description { get; set; }
+        public string Country { get; set; } = null!;
 
-        public virtual InsuranceCompany InsuranceCompanyInsuranceCompany { get; set; } = null!;
-        public virtual Person PersonPerson { get; set; } = null!;
-        public virtual Transaction TransactionTransaction { get; set; } = null!;
+        public virtual Account PolicyHolder { get; set; } = null!;
         public virtual ICollection<File> Files { get; set; }
     }
 }
