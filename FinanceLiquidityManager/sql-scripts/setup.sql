@@ -26,7 +26,7 @@ CREATE TABLE finance.accounts (
 	CONSTRAINT CHK_AccountType CHECK (AccountType IN ('Business', 'Personal')),
 	CONSTRAINT CHK_AccountSubType CHECK (AccountSubType IN ('CurrentAccount', 'Loan', 'Savings')),
 	CONSTRAINT CHK_SchemeName CHECK (SchemeName IN ('UK.OBIE.IBAN', 'UK.OBIE.SortCodeAccountNumber', 'US.RoutingNumberAccountNumber', 'US.BranchCodeAccountNumber', 'UK.Revolut.InternalAccountId')),
-    FOREIGN KEY (Name) REFERENCES Person(PersonId)
+    FOREIGN KEY (Name) REFERENCES person(PersonId)
 );
 
 CREATE TABLE finance.bank (
@@ -39,7 +39,7 @@ CREATE TABLE finance.bank (
     OrderNumberPW INT  NOT NULL
 );
 
-CREATE TABLE finance.banck_account (
+CREATE TABLE finance.bank_account (
     BankId int AUTO_INCREMENT NOT NULL,
     AccountId VARCHAR(40) NOT NULL,
     PRIMARY KEY (BankId,AccountId)
@@ -63,7 +63,7 @@ CREATE TABLE finance.insurance (
     Country varchar(10)  NOT NULL,
     CONSTRAINT CHK_PaymentInstalmentUnitCurrency CHECK (PaymentInstalmentUnitCurrency IN ('USD', 'EUR', 'GBP')),
     CONSTRAINT CHK_PaymentUnitCurrency CHECK (PaymentUnitCurrency IN ('USD', 'EUR', 'GBP')),
-    FOREIGN KEY (PolicyHolderId) REFERENCES Accounts(AccountId)
+    FOREIGN KEY (PolicyHolderId) REFERENCES accounts(AccountId)
 );
 
 
@@ -82,7 +82,7 @@ CREATE TABLE finance.loan (
     Frequency VARCHAR(35) NOT NULL COMMENT 'Zahlungsinterval',
     CONSTRAINT CHK_LoanUnitCurrency CHECK (LoanUnitCurrency IN ('USD', 'EUR', 'GBP')),
     CONSTRAINT CHK_InterestRateUnitCurrency CHECK (InterestRateUnitCurrency IN ('USD', 'EUR', 'GBP')),
-    FOREIGN KEY (CreditorAccountId) REFERENCES Accounts(AccountId)
+    FOREIGN KEY (CreditorAccountId) REFERENCES accounts(AccountId)
 ) COMMENT 'Keeps information about the different loans that the bank grants to customers';
 
  -- Table: files
@@ -105,8 +105,8 @@ CREATE TABLE finance.files (
     FileInfo longblob  NOT NULL,
     FileType VARCHAR(1) NOT NULL,
     RefID INT NOT NULL,
-    FOREIGN KEY (RefID) REFERENCES finance.Loan(LoanId),
-    FOREIGN KEY (RefID) REFERENCES finance.Insurance(InsuranceId),
+    FOREIGN KEY (RefID) REFERENCES finance.loan(LoanId),
+    FOREIGN KEY (RefID) REFERENCES finance.insurance(InsuranceId),
     CONSTRAINT CHK_FileType CHECK (FileType IN ('I', 'L'))  
 );
 
@@ -118,7 +118,7 @@ CREATE TABLE finance.standingOrders (
     FirstPaymentDateTime TIMESTAMP NOT NULL,
     FinalPaymentDateTime TIMESTAMP,
     Reference VARCHAR(35) NOT NULL,
-    FOREIGN KEY (CreditorAccountId) REFERENCES Accounts(AccountId)
+    FOREIGN KEY (CreditorAccountId) REFERENCES accounts(AccountId)
 );
 
 CREATE TABLE finance.transactions (
@@ -156,7 +156,7 @@ CREATE TABLE finance.transactions (
     CONSTRAINT CHK_BalanceCreditDebitIndicator CHECK (BalanceCreditDebitIndicator IN ('Credit', 'Debit')),
     CONSTRAINT CHK_BalanceCurrency CHECK (BalanceCurrency IN ('USD', 'EUR', 'GBP')),
 	CONSTRAINT CHK_ChargeCurrency CHECK (ChargeCurrency IN ('USD', 'EUR', 'GBP')),
-    FOREIGN KEY (AccountId) REFERENCES Accounts(AccountId)
+    FOREIGN KEY (AccountId) REFERENCES accounts(AccountId)
 );
 
 INSERT INTO finance.person (Email, UserName, Password) VALUES
