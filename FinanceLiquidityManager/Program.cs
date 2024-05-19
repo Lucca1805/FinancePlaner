@@ -4,6 +4,7 @@ using System.Text;
 using FinanceLiquidityManager.Infrastructure.Login;
 using FinanceLiquidityManager.Infrastructure.Insurance;
 using FinanceLiquidityManager.Infrastructure.Person;
+using FinanceLiquidityManager.Infrastructure.Transaction;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<InsuranceHandler>();
 builder.Services.AddScoped<PersonHandler>();
+builder.Services.AddScoped<TransactionHandler>();
 
 
 // JWT Authentication
