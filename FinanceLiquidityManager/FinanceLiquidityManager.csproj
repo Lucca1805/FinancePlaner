@@ -20,8 +20,12 @@
 
   <ItemGroup>
     <None Remove="Models\" />
+    <None Remove="Infrastructure\Insurance\" />
+    <None Remove="Infrastructure\Person\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
+    <Folder Include="Infrastructure\Insurance\" />
+    <Folder Include="Infrastructure\Person\" />
   </ItemGroup>
 </Project>

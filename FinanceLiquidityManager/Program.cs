@@ -2,6 +2,8 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FinanceLiquidityManager.Infrastructure.Login;
+using FinanceLiquidityManager.Infrastructure.Insurance;
+using FinanceLiquidityManager.Infrastructure.Person;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<LoginHandler>();
+builder.Services.AddScoped<InsuranceHandler>();
+builder.Services.AddScoped<PersonHandler>();
 
 
 // JWT Authentication
