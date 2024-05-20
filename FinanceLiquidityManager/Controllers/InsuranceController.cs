@@ -11,8 +11,9 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using FinanceLiquidityManager.Infrastructure.Insurance;
+using Microsoft.AspNetCore.Authorization;
 
-namespace LoginController.Controllers
+namespace FinanceLiquidityManager.Controllers
 {
     [ApiController]
     [Route("[controller]")]
@@ -26,12 +27,31 @@ namespace LoginController.Controllers
 
         }
 
-        [HttpPost("GetInsurance")]
-        public async Task<IActionResult> Get()
+
+
+        [HttpGet("user/insurance/{insuranceId}")]
+        public async Task<ActionResult<InsuranceModel>> GetOneInsurance(int insuranceId)
         {
-            return await _insurance.Get();
+            return await _insurance.GetOneInsurance(insuranceId);
         }
 
-        
+        [HttpGet("user/insurances/{policyHolderId}")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<InsuranceModel>>> GetAllInsuranceForUser()
+        {
+            return await _insurance.GetAllInsuranceForUser();
+        }
+
+        [HttpDelete("user/insurance/{insuranceId}")]
+        public async Task<ActionResult> DeleteOneInsurance(int insuranceId)
+        {
+            return await _insurance.DeleteOneInsurance(insuranceId);
+        }
+
+        [HttpPut("user/insurance/{insuranceId}")]
+        public async Task<ActionResult> UpdateOneInsurance(int insuranceId, [FromBody] InsuranceModel updatedInsurance)
+        {
+            return await _insurance.UpdateOneInsurance(insuranceId, updatedInsurance);
+        }
     }
 }

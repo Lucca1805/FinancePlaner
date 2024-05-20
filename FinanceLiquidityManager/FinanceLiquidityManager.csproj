@@ -23,11 +23,13 @@
     <None Remove="Infrastructure\Insurance\" />
     <None Remove="Infrastructure\Person\" />
     <None Remove="Infrastructure\Transaction\" />
+    <None Remove="Infrastructure\Credit\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
     <Folder Include="Infrastructure\Insurance\" />
     <Folder Include="Infrastructure\Person\" />
     <Folder Include="Infrastructure\Transaction\" />
+    <Folder Include="Infrastructure\Credit\" />
   </ItemGroup>
 </Project>
