@@ -160,16 +160,16 @@ CREATE TABLE finance.transactions (
 );
 
 INSERT INTO finance.person (Email, UserName, Password) VALUES
-('person1@example.com', 'user1', 'password1'),
-('person2@example.com', 'user2', 'password2'),
-('person3@example.com', 'user3', 'password3'),
-('person4@example.com', 'user4', 'password4'),
-('person5@example.com', 'user5', 'password5'),
-('person6@example.com', 'user6', 'password6'),
-('person7@example.com', 'user7', 'password7'),
-('person8@example.com', 'user8', 'password8'),
-('person9@example.com', 'user9', 'password9'),
-('person10@example.com', 'user10', 'password10');
+('person1@example.com', 'user1', '$2b$12$YsyA7BgyKgzHVvxlMHSRtOxpncpzchK1EFIMZGmrrwbR0zlXcAIHu'), -- password1
+('person2@example.com', 'user2', '$2a$12$e8BJkWeGywFz0drfp5e40OYBJd2rQYrYcR5H4EX9hM5lVRfuJoWQu'), -- password2
+('person3@example.com', 'user3', '$2a$12$u6hb9A1QY.3FQOafzE8qQOQ.YMdsI/PojpfxRGIpjKoU2fU5dLRr2'), -- password3
+('person4@example.com', 'user4', '$2a$12$qE.yqWVgEOY1Shb04GdBvevN.Kedc1NftPZx6EB7nK7GiYvMz6pi2'), -- password4
+('person5@example.com', 'user5', '$2a$12$ClmTUsqIn9UovPVST3H6BuoM8XrCxXnbV5F2zWnAfk8RxY5QUmuKO'), -- password5
+('person6@example.com', 'user6', '$2a$12$M/fEgSHJERjI.RHDJ4Kye.KJGQ0soF4wsJStN10KnE63yQIqZflue'), -- password6
+('person7@example.com', 'user7', '$2a$12$4.A0ZDi1TPlA6sF1YRXMpeHk26uPQhbP4Q5icZjApyyC3Te.1mY8G'), -- password7
+('person8@example.com', 'user8', '$2a$12$EDqNqggz3J7.1HUzwQspXeNYN6dB80pYI9A5hO1.yG2fw.bmE1xDi'), -- password8
+('person9@example.com', 'user9', '$2a$12$k/qL8MtI4J44ctY0MQUCTu0iJf9VgXTRIbmM60r8oiyPx8XtKROD2'), -- password9
+('person10@example.com', 'user10', '$2a$12$R5T4N44cBh9NN6CmR5Ub6OC98Jfkgk1zK4hPiLRpVXfaVbCZlmybO'); -- password10
 
 -- Insert Accounts for each Person
 INSERT INTO finance.accounts (AccountId, Currency, AccountType, AccountSubType, Nickname, SchemeName, Identification, Name, SecondaryIdentification) VALUES

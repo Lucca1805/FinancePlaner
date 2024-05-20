@@ -2,7 +2,10 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FinanceLiquidityManager.Infrastructure.Login;
-
+using FinanceLiquidityManager.Infrastructure.Insurance;
+using FinanceLiquidityManager.Infrastructure.Person;
+using FinanceLiquidityManager.Infrastructure.Transaction;
+using FinanceLiquidityManager.Infrastructure.Credit;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -10,7 +13,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<LoginHandler>();
-
+builder.Services.AddScoped<InsuranceHandler>();
+builder.Services.AddScoped<PersonHandler>();
+builder.Services.AddScoped<TransactionHandler>();
+builder.Services.AddScoped<CreditHandler>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
