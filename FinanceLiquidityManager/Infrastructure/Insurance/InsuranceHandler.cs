@@ -156,6 +156,56 @@ namespace FinanceLiquidityManager.Infrastructure.Insurance
         }
 
         
+
+        public async Task<ActionResult> AddOneInsurance([FromBody] InsuranceModel newInsurance)
+        {
+            try
+            {
+                string query = @"
+                    INSERT INTO finance.insurance (
+                        PolicyHolderId, 
+                        InsuranceType, 
+                        PaymentInstalmentAmount, 
+                        PaymentInstalmentUnitCurrency, 
+                        DateOpened, 
+                        DateClosed, 
+                        InsuranceState, 
+                        PaymentAmount, 
+                        PaymentUnitCurrency, 
+                        Polizze, 
+                        InsuranceCompany, 
+                        Description, 
+                        Country
+                    ) VALUES (
+                        @PolicyHolderId, 
+                        @InsuranceType, 
+                        @PaymentInstalmentAmount, 
+                        @PaymentInstalmentUnitCurrency, 
+                        @DateOpened, 
+                        @DateClosed, 
+                        @InsuranceState, 
+                        @PaymentAmount, 
+                        @PaymentUnitCurrency, 
+                        @Polizze, 
+                        @InsuranceCompany, 
+                        @Description, 
+                        @Country
+                    );
+                    SELECT LAST_INSERT_ID();";
+
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    var insuranceId = await connection.ExecuteScalarAsync<int>(query, newInsurance);
+                    return CreatedAtAction(nameof(GetOneInsurance), new { insuranceId = insuranceId }, newInsurance);
+                }
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "Unable To Process Request");
+            }
+        }
+
+        
     }
     public class InsuranceModel
     {

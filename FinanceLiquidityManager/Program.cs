@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FinanceLiquidityManager.Infrastructure.Login;
+using FinanceLiquidityManager.Infrastructure.Bank;
 using FinanceLiquidityManager.Infrastructure.Insurance;
 using FinanceLiquidityManager.Infrastructure.Person;
 using FinanceLiquidityManager.Infrastructure.Transaction;
@@ -13,6 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<LoginHandler>();
+builder.Services.AddScoped<BankHandler>();
 builder.Services.AddScoped<InsuranceHandler>();
 builder.Services.AddScoped<PersonHandler>();
 builder.Services.AddScoped<TransactionHandler>();

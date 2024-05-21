@@ -53,5 +53,11 @@ namespace FinanceLiquidityManager.Controllers
         {
             return await _insurance.UpdateOneInsurance(insuranceId, updatedInsurance);
         }
+
+        [HttpPost("user/insurance")]
+        public async Task<ActionResult> AddOneInsurance([FromBody] InsuranceModel newInsurance)
+        {
+            return await _insurance.AddOneInsurance(newInsurance);
+        }
     }
 }
