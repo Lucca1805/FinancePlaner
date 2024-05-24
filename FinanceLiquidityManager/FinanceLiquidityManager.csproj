@@ -24,6 +24,7 @@
     <None Remove="Infrastructure\Person\" />
     <None Remove="Infrastructure\Transaction\" />
     <None Remove="Infrastructure\Credit\" />
+    <None Remove="Infrastructure\File\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
@@ -31,5 +32,6 @@
     <Folder Include="Infrastructure\Person\" />
     <Folder Include="Infrastructure\Transaction\" />
     <Folder Include="Infrastructure\Credit\" />
+    <Folder Include="Infrastructure\File\" />
   </ItemGroup>
 </Project>

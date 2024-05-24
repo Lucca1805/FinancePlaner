@@ -6,6 +6,9 @@ using FinanceLiquidityManager.Infrastructure.Insurance;
 using FinanceLiquidityManager.Infrastructure.Person;
 using FinanceLiquidityManager.Infrastructure.Transaction;
 using FinanceLiquidityManager.Infrastructure.Credit;
+using FinanceLiquidityManager.Infrastructure.File;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -17,7 +20,7 @@ builder.Services.AddScoped<InsuranceHandler>();
 builder.Services.AddScoped<PersonHandler>();
 builder.Services.AddScoped<TransactionHandler>();
 builder.Services.AddScoped<CreditHandler>();
-
+builder.Services.AddScoped<FileHandler>();
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(opt =>
