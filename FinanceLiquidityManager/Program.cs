@@ -7,6 +7,7 @@ using FinanceLiquidityManager.Infrastructure.Person;
 using FinanceLiquidityManager.Infrastructure.Transaction;
 using FinanceLiquidityManager.Infrastructure.Credit;
 using FinanceLiquidityManager.Infrastructure.File;
+//using FinanceLiquidityManager.Infrastructure.Loan;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,7 @@ builder.Services.AddScoped<PersonHandler>();
 builder.Services.AddScoped<TransactionHandler>();
 builder.Services.AddScoped<CreditHandler>();
 builder.Services.AddScoped<FileHandler>();
+//builder.Services.AddScoped<LoanHandler>();
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(opt =>
@@ -36,9 +38,9 @@ builder.Services.AddAuthentication(opt =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
         ValidateIssuer = true,
         ValidateAudience = true,
+        ValidateLifetime = true,
         ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        ClockSkew = TimeSpan.Zero
+        ValidAudience = jwtSettings["Audience"]
     };
 });
 builder.Services.AddCors(options =>
@@ -49,6 +51,12 @@ builder.Services.AddCors(options =>
                .AllowAnyMethod()
                .AllowAnyHeader();
     });
+});
+builder.Services.AddLogging(logging =>
+{
+    logging.ClearProviders();
+    logging.AddConsole();
+    logging.AddDebug();
 });
 var app = builder.Build();
 
