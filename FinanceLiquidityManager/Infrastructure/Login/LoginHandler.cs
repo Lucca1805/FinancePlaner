@@ -17,8 +17,8 @@ using FinanceLiquidityManager.Controllers;
 
 namespace FinanceLiquidityManager.Infrastructure.Login
 {
-    
-    public class LoginHandler:ControllerBase
+
+    public class LoginHandler : ControllerBase
     {
 
         private readonly IConfiguration _configuration;
@@ -85,16 +85,21 @@ namespace FinanceLiquidityManager.Infrastructure.Login
                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
                     var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                     //var expiry = DateTime.Now.AddMinutes(30);
-
+                    var expiry = DateTime.UtcNow.AddYears(1);
                     var token = new JwtSecurityToken(
                         _configuration["Jwt:Issuer"],
                         _configuration["Jwt:Audience"],
                         claims,
-                        expires: null,
+                        expires: expiry,
                         signingCredentials: creds
                     );
 
-                    return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+                    //return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+                    return Ok(new
+                    {
+                        token = new JwtSecurityTokenHandler().WriteToken(token),
+                        claims = claims.ToDictionary(c => c.Type, c => c.Value)
+                    });
                 }
                 else
                 {
@@ -149,5 +154,5 @@ namespace FinanceLiquidityManager.Infrastructure.Login
         public string CurrencyPreference { get; set; } // This should be received as plain text and hashed before storage
     }
 }
-   
+
 
