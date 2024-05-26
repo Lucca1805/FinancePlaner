@@ -237,7 +237,7 @@ INSERT INTO finance.bank_account (BankId, AccountId) VALUES
 (5, 'ACC1010'); 
 
 -- Insert 3 Insurances per User
-INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country) VALUES
+INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country, Frequency) VALUES
 ('ACC1001', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
 ('ACC1002', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
 ('ACC1003', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),

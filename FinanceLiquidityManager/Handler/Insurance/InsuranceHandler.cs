@@ -291,7 +291,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 foreach (var accountId in accountIds)
                 {
                     _logger.LogInformation("Fetching Insurances for AccountId: {accountId}", accountId);
-                    string insuranceaccountQuery = @"SELECT * FROM finance.bank_account WHERE AccountId = @AccountId";
+                    string insuranceaccountQuery = @"SELECT InsuranceType as type, PaymentInstalmentAmount as Cost, PaymentInstalmentUnitCurrency as Currency, Frequency as intervall  FROM finance.insurance WHERE PolicyHolderId = @AccountId";
                     var insuranceContent = (await connection.QueryAsync<InsuranceQueryModel>(insuranceaccountQuery, new { AccountId = accountId })).ToList();
                     
                     foreach (var content in insuranceContent)
@@ -301,14 +301,14 @@ namespace FinanceLiquidityManager.Handler.Insurance
                             content.Cost = CurrencyConverter.Convert(currency, content.Currency, content.Cost);
                         }
 
-                        if (content.interval == "monthly")
+                        if (content.intervall == "Monthly")
                         {
                             for (int monthCounter = 1; monthCounter < 13; monthCounter++)
                             {
                                 response.InsuranceCosts.Add(
                                     new InsuranceCost
                                     {
-                                        Cost = content.Cost,
+                                        Cost = Math.Round(content.Cost,2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(monthCounter)
@@ -316,7 +316,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                     );
                             }
                         }
-                        else if (content.interval == "quarterly")
+                        else if (content.intervall == "Quarterly")
                         {
                             content.Cost = content.Cost / 4;
                             int month = 0;
@@ -340,7 +340,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                 response.InsuranceCosts.Add(
                                     new InsuranceCost
                                     {
-                                        Cost = content.Cost,
+                                        Cost = Math.Round(content.Cost,2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(month)
@@ -358,7 +358,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
                                     new InsuranceCost
                                     {
-                                        Cost = content.Cost,
+                                        Cost = Math.Round(content.Cost,2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(monthCounter)
@@ -409,7 +409,7 @@ public class InsuranceCost
 
 public class InsuranceQueryModel
 {
-    public string interval { get; set; }
+    public string intervall { get; set; }
     public double Cost { get; set; }
     public string Type { get; set; }
     public string Currency { get; set; }
