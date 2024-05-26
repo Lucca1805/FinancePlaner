@@ -10,7 +10,7 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using Dapper;
-using FinanceLiquidityManager.Infrastructure.Login;
+using FinanceLiquidityManager.Handler.Login;
 
 namespace LoginController.Controllers
 {

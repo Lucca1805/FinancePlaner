@@ -17,7 +17,7 @@ using Dapper;
 using FinanceLiquidityManager.Controllers;
 using FinanceLiquidityManager.Models;
 
-namespace FinanceLiquidityManager.Infrastructure.File
+namespace FinanceLiquidityManager.Handler.File
 {
 
     public class FileHandler : ControllerBase

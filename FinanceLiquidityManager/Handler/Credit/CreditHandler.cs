@@ -15,8 +15,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Dapper;
 using FinanceLiquidityManager.Controllers;
+using FinanceLiquidityManager.Models;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using FinanceLiquidityManager.Handler.Insurance;
 
-namespace FinanceLiquidityManager.Infrastructure.Credit
+namespace FinanceLiquidityManager.Handler.Credit
 {
 
     public class CreditHandler : ControllerBase
@@ -38,29 +41,51 @@ namespace FinanceLiquidityManager.Infrastructure.Credit
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        public async Task<ActionResult<LoanModel>> GetOneCredit(int loanId)
+        
+
+        public async Task<ActionResult> GetOneCredit(string userId, int loanId)
         {
             try
             {
-                string query = @"SELECT * FROM finance.loan WHERE LoanId = @LoanId";
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(userId);
+                }
+
+                // Fetch AccountIds based on the user's name
+                string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
                 using (var connection = new MySqlConnection(connectionString))
                 {
-                    var loan = await connection.QueryFirstOrDefaultAsync<LoanModel>(query, new { LoanId = loanId }, commandType: CommandType.Text);
-                    if (loan != null)
+                    _logger.LogInformation("Retrieving AccountIds for user: {userId}", userId);
+                    var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
+
+                    // If no AccountIds found, return empty result
+                    if (accountIds == null || !accountIds.Any())
                     {
-                        return Ok(loan);
+                        _logger.LogWarning("No AccountIds found for user: {userId}", userId);
+                        return Ok(new List<LoanModel>()); // Return empty list
                     }
-                    else
-                    {
-                        return NotFound();
-                    }
+
+                    _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
+
+                    // Fetch insurances for each AccountId
+
+                    _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountIds);
+                    string loanQuery = @"SELECT * FROM finance.loan WHERE LoanId = @LoanId";
+                    var insurance = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountIds, loanId });
+
+
+                    _logger.LogInformation("All standingOrders successfully retrieved.");
+                    return Ok(insurance);
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "Unable To Process Request");
+                _logger.LogError(ex, "An error occurred while retrieving loans.");
+                return new StatusCodeResult(500);
             }
         }
+
 
         public async Task<ActionResult> AddOneCredit([FromBody] LoanModel newLoan)
         {
@@ -104,30 +129,76 @@ namespace FinanceLiquidityManager.Infrastructure.Credit
             }
         }
 
-        public async Task<ActionResult> DeleteOneCredit(int loanId)
+        public async Task<ActionResult> DeleteOneCredit(string userId, int loanId)
         {
             try
             {
-                string query = @"DELETE FROM finance.loan WHERE LoanId = @LoanId";
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
 
+                // Fetch AccountIds based on the user's name
+                string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
                 using (var connection = new MySqlConnection(connectionString))
                 {
-                    var affectedRows = await connection.ExecuteAsync(query, new { LoanId = loanId });
-                    if (affectedRows > 0)
+                    var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
+
+                    if (accountIds == null || !accountIds.Any())
                     {
-                        return NoContent();
+                        return Unauthorized();
                     }
-                    else
+
+
+                    await connection.OpenAsync();
+                    using (var transaction = await connection.BeginTransactionAsync())
                     {
-                        return NotFound();
+                        try
+                        {
+                            // Delete dependent records in the files table
+                            string deleteFilesQuery = @"DELETE FROM finance.files WHERE RefID = @LoanId";
+                            await connection.ExecuteAsync(deleteFilesQuery, new { LoandId = loanId }, transaction);
+
+                            // Delete the credit record
+                            string deleteCreditQuery = @"DELETE FROM finance.loan WHERE LoanId = @LoanId";
+                            var affectedRows = await connection.ExecuteAsync(deleteCreditQuery, new { LoandId = loanId }, transaction);
+
+                            // Commit the transaction if successful
+                            await transaction.CommitAsync();
+
+                            if (affectedRows > 0)
+                            {
+                                return NoContent();
+                            }
+                            else
+                            {
+                                return NotFound();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rollback the transaction in case of any errors
+                            await transaction.RollbackAsync();
+                            _logger.LogError(ex, "An error occurred while deleting the credit.");
+                            return StatusCode(500, new
+                            {
+                                type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+                                title = "An error occurred while processing your request.",
+                                status = 500,
+                                traceId = HttpContext.TraceIdentifier
+                            });
+                        }
                     }
                 }
             }
             catch (Exception)
             {
-                return StatusCode(500, "Unable To Process Request");
+                return StatusCode(500, "Unable to process request");
             }
+
+
         }
+
 
         public async Task<ActionResult> UpdateOneCredit(int loanId, [FromBody] LoanModel updatedLoan)
         {

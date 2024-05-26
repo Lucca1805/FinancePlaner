@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using FinanceLiquidityManager.Controllers;
 
-namespace FinanceLiquidityManager.Infrastructure.Login
+namespace FinanceLiquidityManager.Handler.Login
 {
 
     public class LoginHandler : ControllerBase

@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
-using FinanceLiquidityManager.Infrastructure.Login;
+using FinanceLiquidityManager.Handler.Login;
 using FinanceLiquidityManager.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 
-namespace FinanceLiquidityManager.Infrastructure.Person
+namespace FinanceLiquidityManager.Handler.Transaction
 {
     // You may need to install the Microsoft.AspNetCore.Http.Abstractions package into your project
-    public class PersonHandler
+    public class TransactionHandler
     {
         private readonly IConfiguration _configuration;
         private readonly string connectionString;
 
-        public PersonHandler(IConfiguration configuration)
+        public TransactionHandler(IConfiguration configuration)
         {
             _configuration = configuration;
             var host = _configuration["DBHOST"] ?? "localhost";
@@ -30,41 +30,24 @@ namespace FinanceLiquidityManager.Infrastructure.Person
             connectionString = $"server={host};userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        public async Task<IActionResult> Update(UpdateUserRequest request)
+        public async Task<IActionResult> Get()
         {
-
             using (var connection = new MySqlConnection(connectionString))
             {
                 connection.Open();
-                var query = @"UPDATE person SET UserName = @UserName, Email = @Email WHERE PersonId = @PersonId";
-                var result = await connection.ExecuteAsync(query, new
-                {
-                    PersonId = request.PersonId,
-                    UserName = request.UserName,
-                    Email = request.Email,
-                });
+                string query = @"SELECT * FROM transactions";
 
-                if (result > 0)
-                {
-                    return new OkObjectResult(new { Message = "User updated successfully." });
-                }
-                else
-                {
-                    return new BadRequestObjectResult("Failed to update user.");
-                }
+                var transactions = await connection.QueryAsync<FinanceLiquidityManager.Models.Transaction>(query);
+
+                return new OkObjectResult(transactions);
             }
         }
 
         
 
+
     }
 
-    public class UpdateUserRequest
-    {
-        public int PersonId { get; set; }
-        public string UserName { get; set; }
-        public string Email { get; set; }
-    }
 
 }
 
