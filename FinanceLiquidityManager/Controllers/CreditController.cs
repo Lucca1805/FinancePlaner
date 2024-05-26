@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Dapper;
 using FinanceLiquidityManager.Handler.Credit;
+using FinanceLiquidityManager.Handler.File;
 
 namespace FinanceLiquidityManager.Controllers
 {
@@ -24,10 +25,12 @@ namespace FinanceLiquidityManager.Controllers
     {
 
         private readonly CreditHandler _credit;
+        private readonly FileHandler _file;
 
-        public CreditController(CreditHandler credit)
+        public CreditController(CreditHandler credit, FileHandler file)
         {
             _credit = credit;
+            _file = file;
 
         }
         [HttpGet("user/credit/{loanId}")]
@@ -62,7 +65,14 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoans()
         {
             var userId = User.FindFirstValue("UserId");
-            return await _credit.GetAllLoansForUser(userId);
+            var loans = await _credit.GetAllLoansForUser(userId);
+
+            /*var files;
+            foreach(var loan in loans){
+                var file = await _file.DownloadFileAsync(loan.LoandId);
+                files.AddRange(file);
+            }*/
+            return loans;
         }
 
         [HttpGet("user/allcreditsBetween")]
