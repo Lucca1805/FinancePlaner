@@ -11,6 +11,7 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using FinanceLiquidityManager.Handler.Transaction;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LoginController.Controllers
 {
@@ -18,20 +19,20 @@ namespace LoginController.Controllers
     [Route("[controller]")]
     public class TransactionController : ControllerBase
     {
-        private readonly TransactionHandler transactionHandler;
+        private readonly TransactionHandler _transaction;
 
-        public TransactionController(TransactionHandler transaction)
+        public TransactionController(TransactionHandler transactionHandler)
         {
-            transactionHandler = transaction;
+            _transaction = transactionHandler;
 
         }
 
-        [HttpPost("GetAllTransactions")]
-        public async Task<IActionResult> Get()
+        [HttpPost("user/transactions")]
+        [Authorize]
+        public async Task<ActionResult> GetAllTransactions(TransactionModelRequest request)
         {
-            return await transactionHandler.Get();
+            var userId = User.FindFirstValue("UserId");
+            return await _transaction.GetAllTransactions(userId,request);
         }
-
-        
     }
 }
