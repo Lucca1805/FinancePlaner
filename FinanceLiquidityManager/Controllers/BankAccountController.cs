@@ -25,5 +25,27 @@ namespace FinanceLiquidityManager.Controllers
         {
             _BankAccount = bankAccountHandler;
         }
+
+        [HttpDelete("user/personal/banks")]
+        public async Task<ActionResult> DeleteAllBankAccounts()
+        {
+            var userId = User.FindFirstValue("UserId");
+            return await _BankAccount.DeleteAllBankAccounts(userId);
+        }
+
+        [HttpDelete("user/personal/bank/{id}")]
+        public async Task<ActionResult> DeleteOneBankAccount(string AccountId)
+        {
+            return await _BankAccount.DeleteOneBankAccount(AccountId);
+        }
+
+        [HttpGet("user/personal/banks")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllBankAccountsForUser()
+        {
+            var userId = User.FindFirstValue("UserId");
+            return await _BankAccount.GetAllBankAccountsForUser(userId);
+        }
+
     }
 }
