@@ -41,7 +41,7 @@ namespace FinanceLiquidityManager.Controllers
 
         [HttpGet("user/personal/banks")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllBankAccountsForUser()
+        public async Task<ActionResult<IEnumerable<BankAccountModel>>> GetAllBankAccountsForUser()
         {
             var userId = User.FindFirstValue("UserId");
             return await _BankAccount.GetAllBankAccountsForUser(userId);
