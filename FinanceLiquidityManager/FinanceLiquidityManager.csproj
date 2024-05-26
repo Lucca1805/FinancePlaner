@@ -26,14 +26,15 @@
     <None Remove="Infrastructure\Credit\" />
     <None Remove="Infrastructure\File\" />
     <None Remove="Infrastructure\Loan\" />
+    <None Remove="Handler\StandingOrder\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />
-    <Folder Include="Infrastructure\Insurance\" />
-    <Folder Include="Infrastructure\Person\" />
-    <Folder Include="Infrastructure\Transaction\" />
-    <Folder Include="Infrastructure\Credit\" />
-    <Folder Include="Infrastructure\File\" />
-    <Folder Include="Infrastructure\Loan\" />
+    <Folder Include="Handler\Insurance\" />
+    <Folder Include="Handler\Person\" />
+    <Folder Include="Handler\Transaction\" />
+    <Folder Include="Handler\Credit\" />
+    <Folder Include="Handler\File\" />
+    <Folder Include="Handler\StandingOrder\" />
   </ItemGroup>
 </Project>

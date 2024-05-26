@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using FinanceLiquidityManager.Infrastructure.Login;
-using FinanceLiquidityManager.Infrastructure.Insurance;
-using FinanceLiquidityManager.Infrastructure.Person;
-using FinanceLiquidityManager.Infrastructure.Transaction;
-using FinanceLiquidityManager.Infrastructure.Credit;
-using FinanceLiquidityManager.Infrastructure.File;
+using FinanceLiquidityManager.Handler.Login;
+using FinanceLiquidityManager.Handler.Insurance;
+using FinanceLiquidityManager.Handler.Person;
+using FinanceLiquidityManager.Handler.Transaction;
+using FinanceLiquidityManager.Handler.Credit;
+using FinanceLiquidityManager.Handler.File;
+using FinanceLiquidityManager.Handler.StandingOrder;
 using Microsoft.OpenApi.Models;
 //using FinanceLiquidityManager.Infrastructure.Loan;
 
@@ -23,6 +24,7 @@ builder.Services.AddScoped<PersonHandler>();
 builder.Services.AddScoped<TransactionHandler>();
 builder.Services.AddScoped<CreditHandler>();
 builder.Services.AddScoped<FileHandler>();
+builder.Services.AddScoped<StandingOrderHandler>();
 //builder.Services.AddScoped<LoanHandler>();
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -56,11 +58,11 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter your token in the text input below.\r\n\r\nExample: \"1safsfsdfdfd\"",
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -78,6 +80,8 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>

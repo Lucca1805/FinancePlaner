@@ -10,7 +10,7 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using Dapper;
-using FinanceLiquidityManager.Infrastructure.Insurance;
+using FinanceLiquidityManager.Handler.Insurance;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FinanceLiquidityManager.Controllers
@@ -27,31 +27,36 @@ namespace FinanceLiquidityManager.Controllers
 
         }
 
-
-
         [HttpGet("user/insurance/{insuranceId}")]
-        public async Task<ActionResult<InsuranceModel>> GetOneInsurance(int insuranceId)
+        [Authorize]
+        public async Task<ActionResult> GetOneInsurance(int insuranceId)
         {
-            return await _insurance.GetOneInsurance(insuranceId);
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.GetOneInsurance(userId, insuranceId);
         }
 
         [HttpGet("user/insurances/{policyHolderId}")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<InsuranceModel>>> GetAllInsuranceForUser()
         {
-            return await _insurance.GetAllInsuranceForUser();
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.GetAllInsuranceForUser(userId);
         }
 
         [HttpDelete("user/insurance/{insuranceId}")]
+        [Authorize]
         public async Task<ActionResult> DeleteOneInsurance(int insuranceId)
         {
-            return await _insurance.DeleteOneInsurance(insuranceId);
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.DeleteOneInsurance(userId, insuranceId);
         }
 
         [HttpPut("user/insurance/{insuranceId}")]
+        [Authorize]
         public async Task<ActionResult> UpdateOneInsurance(int insuranceId, [FromBody] InsuranceModel updatedInsurance)
         {
-            return await _insurance.UpdateOneInsurance(insuranceId, updatedInsurance);
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.UpdateOneInsurance(userId, insuranceId, updatedInsurance);
         }
     }
 }

@@ -14,7 +14,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Dapper;
-using FinanceLiquidityManager.Infrastructure.Credit;
+using FinanceLiquidityManager.Handler.Credit;
 
 namespace FinanceLiquidityManager.Controllers
 {
@@ -33,7 +33,8 @@ namespace FinanceLiquidityManager.Controllers
         [HttpGet("user/credit/{loanId}")]
         public async Task<ActionResult<LoanModel>> GetOneCredit(int loanId)
         {
-            return await _credit.GetOneCredit(loanId);
+            var userId = User.FindFirstValue("UserId");
+            return await _credit.GetOneCredit(userId, loanId);
         }
 
         [HttpPost("user/credit")]
@@ -45,7 +46,8 @@ namespace FinanceLiquidityManager.Controllers
         [HttpDelete("user/credit/{loanId}")]
         public async Task<ActionResult> DeleteOneCredit(int loanId)
         {
-            return await _credit.DeleteOneCredit(loanId);
+            var userId = User.FindFirstValue("UserId");
+            return await _credit.DeleteOneCredit(userId, loanId);
         }
 
         [HttpPut("user/credit/{loanId}")]
