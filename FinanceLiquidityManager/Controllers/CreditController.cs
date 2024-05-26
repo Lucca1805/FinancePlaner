@@ -62,6 +62,14 @@ namespace FinanceLiquidityManager.Controllers
             var userId = User.FindFirstValue("UserId");
             return await _credit.GetAllLoansForUser(userId);
         }
+
+        [HttpGet("user/allcreditsBetween")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansBetween(DateTime startDate, DateTime endDate)
+        {
+            var userId = User.FindFirstValue("UserId");
+            return await _credit.GetAllLoansForUserBetween(userId,startDate,endDate);
+        }
     }
 
 
