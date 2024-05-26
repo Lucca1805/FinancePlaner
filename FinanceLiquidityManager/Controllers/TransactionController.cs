@@ -24,7 +24,6 @@ namespace LoginController.Controllers
         public TransactionController(TransactionHandler transactionHandler)
         {
             _transaction = transactionHandler;
-
         }
 
         [HttpPost("user/transactions")]
@@ -32,7 +31,16 @@ namespace LoginController.Controllers
         public async Task<ActionResult> GetAllTransactions(TransactionModelRequest request)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _transaction.GetAllTransactions(userId,request);
+            return await _transaction.GetAllTransactions(userId, request);
+        }
+
+        [HttpPost("user/transactions/assetChart")]
+        [Authorize]
+        public async Task<ActionResult> GetDataForAreaValueChart(TransactionAreaChartModelRequest request)
+        {
+            var userId = User.FindFirstValue("UserId");
+            var Currency = User.FindFirstValue("CurrencyPreference");
+            return await _transaction.GetAreaValueChartData(userId, request, Currency);
         }
     }
 }

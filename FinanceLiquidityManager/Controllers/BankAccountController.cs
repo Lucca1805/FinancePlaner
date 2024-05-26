@@ -10,7 +10,7 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using Dapper;
-using FinanceLiquidityManager.Infrastructure.BankAccount;
+using FinanceLiquidityManager.Handler.BankAccount;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FinanceLiquidityManager.Controllers

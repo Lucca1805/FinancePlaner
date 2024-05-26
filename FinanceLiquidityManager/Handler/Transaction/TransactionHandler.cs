@@ -10,19 +10,23 @@ using FinanceLiquidityManager.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using System.ComponentModel.DataAnnotations;
 
 namespace FinanceLiquidityManager.Handler.Transaction
 {
-    // You may need to install the Microsoft.AspNetCore.Http.Abstractions package into your project
     public class TransactionHandler : ControllerBase
     {
         private readonly IConfiguration _configuration;
         private readonly string connectionString;
+        private readonly ILogger<TransactionHandler> _logger;
 
-        public TransactionHandler(IConfiguration configuration)
+        public TransactionHandler(IConfiguration configuration, ILogger<TransactionHandler> logger)
         {
             _configuration = configuration;
+            _logger = logger;
             var host = _configuration["DBHOST"] ?? "localhost";
             var port = _configuration["DBPORT"] ?? "3306";
             var password = _configuration["MYSQL_PASSWORD"] ?? _configuration.GetConnectionString("MYSQL_PASSWORD");
@@ -32,26 +36,23 @@ namespace FinanceLiquidityManager.Handler.Transaction
             connectionString = $"server={host};userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        
-
         public async Task<ActionResult> GetAllTransactions(string userId, TransactionModelRequest request)
         {
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(userId);
+                return Unauthorized();
             }
 
-            // Fetch AccountIds based on the user's name
+// Fetch AccountIds based on the user's name
             string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
 
             using (var connection = new MySqlConnection(connectionString))
             {
                 var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
 
-                // If no AccountIds found, return empty result
                 if (accountIds == null || !accountIds.Any())
                 {
-                    return Ok(new List<Transaction>()); // Return empty list
+                    return Ok(new List<Transaction>());
                 }
 
 
@@ -97,8 +98,90 @@ namespace FinanceLiquidityManager.Handler.Transaction
             }
         }
 
-    }
+        public async Task<ActionResult> GetAreaValueChartData(string userId, TransactionAreaChartModelRequest request, string Currency)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
 
+            var response = new TransactionAreaChartResponse
+            {
+                Accounts = new Dictionary<string, Account>()
+            };
+
+            foreach (string accountId in request.account)
+            {
+                var acc = new Account
+                {
+                    AccountName = accountId,
+                    Data = new List<AccountData>()
+                };
+
+                string query = "Select BookingDateTime as Date, BalanceAmount as Value, BalanceCurrency as Currency " +
+                               "from finance.transactions " +
+                               "WHERE AccountId = @AccountId " +
+                               "AND BookingDateTime Between @dateFrom AND @dateTo";
+                try
+                {
+                    using (var connection = new MySqlConnection(connectionString))
+                    {
+                        var data = await connection.QueryAsync<AccountData>(query, new { AccountId = accountId, dateFrom = request.dateFrom, dateTo = request.dateTo });
+
+                        foreach (AccountData accData in data)
+                        {
+                            if (accData.Currency != Currency)
+                            {
+                                accData.Value = CurrencyConverter.Convert(Currency, accData.Currency, accData.Value);
+                                accData.Currency = Currency;
+                            }
+                        }
+                        acc.Data.AddRange(data);
+                        response.Accounts[accountId] = acc;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
+                    return new StatusCodeResult(500);
+                }
+            }
+
+            return Ok(response);
+        }
+    }
+    public class CurrencyConverter
+    {
+        // Assume exchange rate from USD to EUR
+        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
+
+        public static double Convert(string newCurrency, string oldCurrency, double Value)
+        {
+            if (newCurrency == "€" && oldCurrency == "USD")
+            {
+                return ConvertUsdToEur(Value);
+            }
+            else if (newCurrency == "USD" && oldCurrency == "€")
+            {
+                return ConvertEurToUsd(Value);
+            }
+            else
+            {
+                return (Value);
+            }
+        }
+        // Convert USD to EUR
+        public static double ConvertUsdToEur(double amountInUsd)
+        {
+            return amountInUsd * UsdToEurExchangeRate;
+        }
+
+        // Convert EUR to USD
+        public static double ConvertEurToUsd(double amountInEur)
+        {
+            return amountInEur / UsdToEurExchangeRate;
+        }
+    }
     public class TransactionModelRequest
     {
         public string? FreeText { get; set; }
@@ -121,6 +204,35 @@ namespace FinanceLiquidityManager.Handler.Transaction
         public string MerchantName { get; set; }
     }
 
+    public class TransactionAreaChartModelRequest
+    {
+        public string? freeText { get; set; }
+        public string? iban { get; set; }
+        public string[] account { get; set; }
+        public DateTime? dateFrom { get; set; }
+        public DateTime? dateTo { get; set; }
+        //public Transactiontype? type { get; set; }
+        [TransactionTypeValidation(ErrorMessage = "Transaction type must be either 'Revenue' or 'Expense'.")]
+        public string type { get; set; }
+    }
+
+    public class TransactionAreaChartResponse
+    {
+        public Dictionary<string, Account> Accounts { get; set; }
+    }
+
+    public class Account
+    {
+        public string AccountName { get; set; }
+        public List<AccountData> Data { get; set; }
+    }
+
+    public class AccountData
+    {
+        public DateTime Date { get; set; }
+        public double Value { get; set; }
+        public string Currency { get; set; }
+    }
 
     public class Transaction
     {
@@ -128,4 +240,23 @@ namespace FinanceLiquidityManager.Handler.Transaction
         public string AccountId { get; set; } = null!;
     }
 
+    public enum Transactiontype
+    {
+        Revenue, Expense
+    }
+
+    public class TransactionTypeValidationAttribute : ValidationAttribute
+    {
+        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        {
+            var transactionType = value as string;
+
+            if (transactionType != null && (transactionType.Equals("Revenue", StringComparison.OrdinalIgnoreCase) || transactionType.Equals("Expense", StringComparison.OrdinalIgnoreCase)))
+            {
+                return ValidationResult.Success;
+            }
+
+            return new ValidationResult(ErrorMessage);
+        }
+    }
 }

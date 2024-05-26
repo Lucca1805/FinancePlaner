@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using FinanceLiquidityManager.Controllers;
 
-namespace FinanceLiquidityManager.Infrastructure.BankAccount
+namespace FinanceLiquidityManager.Handler.BankAccount
 {
     public class BankAccountHandler : ControllerBase
     {
@@ -114,7 +114,7 @@ namespace FinanceLiquidityManager.Infrastructure.BankAccount
             }
         }
 
-         public async Task<ActionResult<IEnumerable<BankAccountModel>>> GetAllBankAccountsForUser(string userId)
+        public async Task<ActionResult<IEnumerable<BankAccountModel>>> GetAllBankAccountsForUser(string userId)
         {
             try
             {
@@ -134,7 +134,7 @@ namespace FinanceLiquidityManager.Infrastructure.BankAccount
                     if (accountIds == null || !accountIds.Any())
                     {
                         _logger.LogWarning("No AccountIds found for user: {userId}", userId);
-                        return Ok(new List<LoanModel>()); // Return empty list
+                        return Ok(new List<AccountModel>()); // Return empty list
                     }
 
                     _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
@@ -165,5 +165,10 @@ namespace FinanceLiquidityManager.Infrastructure.BankAccount
     {
         public int BankId { get; set; }
         public string AccountId { get; set; } = null!;
+    }
+
+    public class AccountModel
+    {
+        public string AccountId { get; set; }
     }
 }

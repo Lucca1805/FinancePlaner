@@ -8,6 +8,7 @@ using FinanceLiquidityManager.Handler.Transaction;
 using FinanceLiquidityManager.Handler.Credit;
 using FinanceLiquidityManager.Handler.File;
 using FinanceLiquidityManager.Handler.StandingOrder;
+using FinanceLiquidityManager.Handler.BankAccount;
 using Microsoft.OpenApi.Models;
 //using FinanceLiquidityManager.Infrastructure.Loan;
 
@@ -25,6 +26,7 @@ builder.Services.AddScoped<TransactionHandler>();
 builder.Services.AddScoped<CreditHandler>();
 builder.Services.AddScoped<FileHandler>();
 builder.Services.AddScoped<StandingOrderHandler>();
+builder.Services.AddScoped<BankAccountHandler>();
 //builder.Services.AddScoped<LoanHandler>();
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
