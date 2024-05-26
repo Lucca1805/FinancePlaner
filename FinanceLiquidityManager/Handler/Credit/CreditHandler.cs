@@ -289,7 +289,51 @@ namespace FinanceLiquidityManager.Handler.Credit
             }
         }
 
+        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUserBetween(string userId,DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(userId);
+                }
 
+                // Fetch AccountIds based on the user's name
+                string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    _logger.LogInformation("Retrieving AccountIds for user: {userId}", userId);
+                    var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
+
+                    // If no AccountIds found, return empty result
+                    if (accountIds == null || !accountIds.Any())
+                    {
+                        _logger.LogWarning("No AccountIds found for user: {userId}", userId);
+                        return Ok(new List<LoanModel>()); // Return empty list
+                    }
+
+                    _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
+
+                    // Fetch loans for each AccountId
+                    List<LoanModel> allLoans = new List<LoanModel>();
+                    foreach (var accountId in accountIds)
+                    {
+                        _logger.LogInformation("Fetching loans for AccountId: {accountId}", accountId);
+                        string loanQuery = @"SELECT * FROM finance.loan WHERE CreditorAccountId = @CreditorAccountId AND StartDate >= @startDate And EndDate <= @endDate";
+                        var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountId,startDate = startDate,endDate= endDate });
+                        allLoans.AddRange(loans);
+                    }
+
+                    _logger.LogInformation("All loans successfully retrieved.");
+                    return Ok(allLoans);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving loans.");
+                return new StatusCodeResult(500);
+            }
+        }
     }
 
     public class LoanModel
