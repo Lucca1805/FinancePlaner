@@ -58,5 +58,14 @@ namespace FinanceLiquidityManager.Controllers
             var userId = User.FindFirstValue("UserId");
             return await _insurance.UpdateOneInsurance(userId, insuranceId, updatedInsurance);
         }
+
+        [HttpGet("user/insurance/costhistorychart")]
+        [Authorize]
+        public async Task<ActionResult> getCostHistoryChartData()
+        {
+            var userId = User.FindFirstValue("UserId");
+            var currency = User.FindFirstValue("CurrencyPreference");
+            return await _insurance.getCostHistoryData(userId,currency);
+        }
     }
 }

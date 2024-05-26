@@ -200,7 +200,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
 
         }
-    
+
 
         public async Task<ActionResult> UpdateOneInsurance(string userId, int insuranceId, InsuranceModel updatedInsurance)
         {
@@ -265,24 +265,220 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 return StatusCode(500, "Unable to process request");
             }
         }
-    }
 
-        public class InsuranceModel
+        public async Task<ActionResult> getCostHistoryData(string userId, string currency)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+            using (var connection = new MySqlConnection(connectionString))
+            {
+                _logger.LogInformation("Retrieving AccountIds for user: {userId}", userId);
+                var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
+
+                if (accountIds == null || !accountIds.Any())
+                {
+                    _logger.LogWarning("No AccountIds found for user: {userId}", userId);
+                    return Ok(new List<InsuranceHistoryChartRespone>());
+                }
+
+                _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
+
+                InsuranceHistoryChartRespone response = new InsuranceHistoryChartRespone { InsuranceCosts = new List<InsuranceCost>() };
+                foreach (var accountId in accountIds)
+                {
+                    _logger.LogInformation("Fetching Insurances for AccountId: {accountId}", accountId);
+                    string insuranceaccountQuery = @"SELECT * FROM finance.bank_account WHERE AccountId = @AccountId";
+                    var insuranceContent = (await connection.QueryAsync<InsuranceQueryModel>(insuranceaccountQuery, new { AccountId = accountId })).ToList();
+                    
+                    foreach (var content in insuranceContent)
+                    {
+                        if (currency != content.Currency)
+                        {
+                            content.Cost = CurrencyConverter.Convert(currency, content.Currency, content.Cost);
+                        }
+
+                        if (content.interval == "monthly")
+                        {
+                            for (int monthCounter = 1; monthCounter < 13; monthCounter++)
+                            {
+                                response.InsuranceCosts.Add(
+                                    new InsuranceCost
+                                    {
+                                        Cost = content.Cost,
+                                        Currency = currency,
+                                        Insurance = content.Type,
+                                        Month = MonthConverter.GetMonthName(monthCounter)
+                                    }
+                                    );
+                            }
+                        }
+                        else if (content.interval == "quarterly")
+                        {
+                            content.Cost = content.Cost / 4;
+                            int month = 0;
+                            for (int monthCounter = 1; monthCounter < 4; monthCounter++)
+                            {
+                                switch (monthCounter)
+                                {
+                                    case 1:
+                                        month = 1;
+                                        break;
+                                    case 2:
+                                        month = 4;
+                                        break;
+                                    case 3:
+                                        month = 7;
+                                        break;
+                                    case 4:
+                                        month = 10;
+                                        break;
+                                }
+                                response.InsuranceCosts.Add(
+                                    new InsuranceCost
+                                    {
+                                        Cost = content.Cost,
+                                        Currency = currency,
+                                        Insurance = content.Type,
+                                        Month = MonthConverter.GetMonthName(month)
+                                    }
+                                    );
+                            }
+                        }
+                        else
+                        {
+                            //assume yearly
+                            content.Cost = content.Cost / 12;
+                            for (int monthCounter = 1; monthCounter < 13; monthCounter++)
+                            {
+                                response.InsuranceCosts.Add(
+
+                                    new InsuranceCost
+                                    {
+                                        Cost = content.Cost,
+                                        Currency = currency,
+                                        Insurance = content.Type,
+                                        Month = MonthConverter.GetMonthName(monthCounter)
+                                    }
+                                    );
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("All insurances successfully retrieved.");
+                return Ok(response);
+            }
+        }
+    }
+}
+
+public class InsuranceModel
+{
+    public int InsuranceId { get; set; }
+    public string PolicyHolderId { get; set; }
+    public string InsuranceType { get; set; }
+    public decimal PaymentInstalmentAmount { get; set; }
+    public string PaymentInstalmentUnitCurrency { get; set; }
+    public DateTime DateOpened { get; set; }
+    public DateTime? DateClosed { get; set; }
+    public bool InsuranceState { get; set; }
+    public decimal PaymentAmount { get; set; }
+    public string PaymentUnitCurrency { get; set; }
+    public byte[] Polizze { get; set; }
+    public string InsuranceCompany { get; set; }
+    public string Description { get; set; }
+    public string Country { get; set; }
+}
+public class InsuranceHistoryChartRespone
+{
+    public List<InsuranceCost> InsuranceCosts { get; set; }
+}
+
+public class InsuranceCost
+{
+    public string Month { get; set; }
+    public string Insurance { get; set; }
+    public double Cost { get; set; }
+    public string Currency { get; set; }
+
+}
+
+public class InsuranceQueryModel
+{
+    public string interval { get; set; }
+    public double Cost { get; set; }
+    public string Type { get; set; }
+    public string Currency { get; set; }
+}
+public class CurrencyConverter
+{
+    // Assume exchange rate from USD to EUR
+    private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
+
+    public static double Convert(string newCurrency, string oldCurrency, double Value)
     {
-        public int InsuranceId { get; set; }
-        public string PolicyHolderId { get; set; }
-        public string InsuranceType { get; set; }
-        public decimal PaymentInstalmentAmount { get; set; }
-        public string PaymentInstalmentUnitCurrency { get; set; }
-        public DateTime DateOpened { get; set; }
-        public DateTime? DateClosed { get; set; }
-        public bool InsuranceState { get; set; }
-        public decimal PaymentAmount { get; set; }
-        public string PaymentUnitCurrency { get; set; }
-        public byte[] Polizze { get; set; }
-        public string InsuranceCompany { get; set; }
-        public string Description { get; set; }
-        public string Country { get; set; }
+        if (newCurrency == "€" && oldCurrency == "USD")
+        {
+            return ConvertUsdToEur(Value);
+        }
+        else if (newCurrency == "USD" && oldCurrency == "€")
+        {
+            return ConvertEurToUsd(Value);
+        }
+        else
+        {
+            return (Value);
+        }
+    }
+    // Convert USD to EUR
+    public static double ConvertUsdToEur(double amountInUsd)
+    {
+        return amountInUsd * UsdToEurExchangeRate;
     }
 
+    // Convert EUR to USD
+    public static double ConvertEurToUsd(double amountInEur)
+    {
+        return amountInEur / UsdToEurExchangeRate;
+    }
+}
+
+public class MonthConverter
+{
+    public static string GetMonthName(int monthNumber)
+    {
+        switch (monthNumber)
+        {
+            case 1:
+                return "January";
+            case 2:
+                return "February";
+            case 3:
+                return "March";
+            case 4:
+                return "April";
+            case 5:
+                return "May";
+            case 6:
+                return "June";
+            case 7:
+                return "July";
+            case 8:
+                return "August";
+            case 9:
+                return "September";
+            case 10:
+                return "October";
+            case 11:
+                return "November";
+            case 12:
+                return "December";
+            default:
+                return "Invalid month value";
+        }
+    }
 }

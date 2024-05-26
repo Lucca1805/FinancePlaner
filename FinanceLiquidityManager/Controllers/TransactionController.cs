@@ -42,5 +42,14 @@ namespace LoginController.Controllers
             var Currency = User.FindFirstValue("CurrencyPreference");
             return await _transaction.GetAreaValueChartData(userId, request, Currency);
         }
+
+        [HttpPost("user/transactions/expenserevenuechart")]
+        [Authorize]
+        public async Task<ActionResult> GetDataForExpenseRevenueChart(TransactionAreaChartModelRequest request)
+        {
+            var userId = User.FindFirstValue("UserId");
+            var Currency = User.FindFirstValue("CurrencyPreference");
+            return await _transaction.GetExpenseRevenueChartData(userId, request, Currency);
+        }
     }
 }
