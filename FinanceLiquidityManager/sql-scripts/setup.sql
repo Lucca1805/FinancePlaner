@@ -61,6 +61,7 @@ CREATE TABLE finance.insurance (
     InsuranceCompany varchar(20)  NOT NULL,
     Description varchar(20),
     Country varchar(10)  NOT NULL,
+    Frequency VARCHAR(35) NOT NULL COMMENT 'Zahlungsinterval',
     CONSTRAINT CHK_PaymentInstalmentUnitCurrency CHECK (PaymentInstalmentUnitCurrency IN ('USD', 'EUR', 'GBP')),
     CONSTRAINT CHK_PaymentUnitCurrency CHECK (PaymentUnitCurrency IN ('USD', 'EUR', 'GBP')),
     FOREIGN KEY (PolicyHolderId) REFERENCES accounts(AccountId)
@@ -237,18 +238,18 @@ INSERT INTO finance.bank_account (BankId, AccountId) VALUES
 
 -- Insert 3 Insurances per User
 INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country) VALUES
-('ACC1001', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA'),
-('ACC1002', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA'),
-('ACC1003', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany'),
-('ACC1004', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA'),
-('ACC1005', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA'),
-('ACC1006', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany'),
-('ACC1007', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA'),
-('ACC1008', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA'),
-('ACC1009', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany'),
-('ACC1010', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA'),
-('ACC1011', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA'),
-('ACC1012', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany');
+('ACC1001', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1002', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1003', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1004', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1005', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1006', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1007', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1008', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1009', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1010', 'Health', 150.50, 'USD', '2022-01-01 10:00:00', NULL, TRUE, 1500.00, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1011', 'Car', 200.25, 'USD', '2022-06-01 10:00:00', NULL, TRUE, 2000.00, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1012', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly');
 
 -- Insert Loans per User (3 loans per user)
 INSERT INTO finance.loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency) VALUES

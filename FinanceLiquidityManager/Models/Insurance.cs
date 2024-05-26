@@ -25,6 +25,8 @@ namespace FinanceLiquidityManager.Models
         public string? Description { get; set; }
         public string Country { get; set; } = null!;
 
+        public string Frequency { get; set; } = null!;
+
         public virtual Account PolicyHolder { get; set; } = null!;
         public virtual ICollection<File> Files { get; set; }
     }
