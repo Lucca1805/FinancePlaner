@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Dapper;
 using FinanceLiquidityManager.Handler.Insurance;
 using Microsoft.AspNetCore.Authorization;
+using FinanceLiquidityManager.Handler.Credit;
 
 namespace FinanceLiquidityManager.Controllers
 {
@@ -26,6 +27,14 @@ namespace FinanceLiquidityManager.Controllers
             _insurance = insuranceHandler;
 
         }
+        [HttpPost("user/insurance")]
+        [Authorize]
+        public async Task<ActionResult> AddInsurance([FromBody] InsuranceModelRequest newInsurance, [FromForm] IFormFile polizze)
+        {
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.AddInsurance(userId, newInsurance, polizze);
+        }
+
 
         [HttpGet("user/insurance/{insuranceId}")]
         [Authorize]

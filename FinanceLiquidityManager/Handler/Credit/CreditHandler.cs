@@ -88,41 +88,60 @@ namespace FinanceLiquidityManager.Handler.Credit
 
 
 
-        public async Task<ActionResult> AddLoan([FromBody] LoanModelCreateRequest newLoan)
+        public async Task<ActionResult> AddLoan(string userId, [FromBody] LoanModelCreateRequest newLoan)
         {
             try
             {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
 
+                // Fetch AccountId based on the user's name
+                string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
                 using (var connection = new MySqlConnection(connectionString))
                 {
-                    string query = @"
-                        INSERT INTO finance.loan (
-                            CreditorAccountId, 
-                            LoanType, 
-                            LoanAmount, 
-                            LoanUnitCurrency, 
-                            InterestRate, 
-                            InterestRateUnitCurrency, 
-                            StartDate, 
-                            EndDate, 
-                            LoanStatus, 
-                            Frequency
-                        ) VALUES (
-                            @CreditorAccountId, 
-                            @LoanType, 
-                            @LoanAmount, 
-                            @LoanUnitCurrency, 
-                            @InterestRate, 
-                            @InterestRateUnitCurrency, 
-                            @StartDate, 
-                            @EndDate, 
-                            @LoanStatus, 
-                            @Frequency
-                        );
-                    ";
+                    
+                        var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
+                    var accountId = accountIds.FirstOrDefault();
+
+                    // Check if accountId is null or empty
+                    if (string.IsNullOrEmpty(accountId))
+                    {
+                        return Unauthorized("User account not found.");
+                    }
+
+                    // Assign the accountId to the newLoan's CreditorAccountId
+                    newLoan.CreditorAccountId = accountId;
+
+                    string queryLoan = @"
+                INSERT INTO finance.loan (
+                    CreditorAccountId, 
+                    LoanType, 
+                    LoanAmount, 
+                    LoanUnitCurrency, 
+                    InterestRate, 
+                    InterestRateUnitCurrency, 
+                    StartDate, 
+                    EndDate, 
+                    LoanStatus, 
+                    Frequency
+                ) VALUES (
+                    @CreditorAccountId, 
+                    @LoanType, 
+                    @LoanAmount, 
+                    @LoanUnitCurrency, 
+                    @InterestRate, 
+                    @InterestRateUnitCurrency, 
+                    @StartDate, 
+                    @EndDate, 
+                    @LoanStatus, 
+                    @Frequency
+                );
+            ";
 
                     await connection.OpenAsync();
-                    var command = new MySqlCommand(query, connection);
+                    var command = new MySqlCommand(queryLoan, connection);
                     command.Parameters.AddWithValue("@CreditorAccountId", newLoan.CreditorAccountId);
                     command.Parameters.AddWithValue("@LoanType", newLoan.LoanType);
                     command.Parameters.AddWithValue("@LoanAmount", newLoan.LoanAmount);
@@ -151,6 +170,7 @@ namespace FinanceLiquidityManager.Handler.Credit
                 return StatusCode(500, "Unable To Process Request");
             }
         }
+
 
 
         public async Task<ActionResult> DeleteOneCredit(string userId, int loanId)

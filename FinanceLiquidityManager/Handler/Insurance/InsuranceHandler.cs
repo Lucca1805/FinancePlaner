@@ -16,6 +16,7 @@ using Dapper;
 using FinanceLiquidityManager.Controllers;
 using FinanceLiquidityManager.Models;
 using System.Collections;
+using FinanceLiquidityManager.Handler.Credit;
 
 namespace FinanceLiquidityManager.Handler.Insurance
 {
@@ -39,7 +40,117 @@ namespace FinanceLiquidityManager.Handler.Insurance
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
+        [HttpPost]
+        public async Task<ActionResult> AddInsurance(string userId, [FromBody] InsuranceModelRequest newInsurance, [FromForm] IFormFile polizze)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
 
+                // Fetch AccountId based on the user's name
+                string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
+                    var accountId = accountIds.FirstOrDefault();
+
+                    // Check if accountId is null or empty
+                    if (string.IsNullOrEmpty(accountId))
+                    {
+                        return Unauthorized("User account not found.");
+                    }
+
+                    // Assign the accountId to the newInsurance's PolicyHolderId
+                    newInsurance.PolicyHolderId = accountId;
+
+                    // Read the file data into a byte array
+                    byte[] polizzeBytes = null;
+                    if (polizze != null && polizze.Length > 0)
+                    {
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await polizze.CopyToAsync(memoryStream);
+                            polizzeBytes = memoryStream.ToArray();
+                        }
+                    }
+
+                    // Include the file data in the insertion query
+                    string queryInsurance = @"
+                INSERT INTO finance.insurance (
+                    PolicyHolderId, 
+                    InsuranceType, 
+                    PaymentInstalmentAmount, 
+                    PaymentInstalmentUnitCurrency, 
+                    DateOpened, 
+                    DateClosed, 
+                    PaymentAmount, 
+                    PaymentUnitCurrency, 
+                    Description, 
+                    Frequency,
+                    Polizze,
+                    InsuranceState,
+                    InsuranceCompany,
+                    Country
+                ) VALUES (
+                    @PolicyHolderId, 
+                    @InsuranceType, 
+                    @PaymentInstalmentAmount, 
+                    @PaymentInstalmentUnitCurrency, 
+                    @DateOpened, 
+                    @DateClosed, 
+                    @PaymentAmount, 
+                    @PaymentUnitCurrency, 
+                    @Description, 
+                    @Frequency,
+                    @Polizze,
+                    @InsuranceState,
+                    @InsuranceCompany,
+                    @Country
+                );
+            ";
+
+                    var parameters = new
+                    {
+                        PolicyHolderId = newInsurance.PolicyHolderId,
+                        InsuranceType = newInsurance.InsuranceType,
+                        PaymentInstalmentAmount = newInsurance.PaymentInstalmentAmount,
+                        PaymentInstalmentUnitCurrency = newInsurance.PaymentInstalmentUnitCurrency,
+                        DateOpened = newInsurance.DateOpened,
+                        DateClosed = newInsurance.DateClosed,
+                        PaymentAmount = newInsurance.PaymentAmount,
+                        PaymentUnitCurrency = newInsurance.PaymentUnitCurrency,
+                        Description = newInsurance.Description,
+                        Frequency = newInsurance.Frequency,
+                        Polizze = polizzeBytes,
+                        InsuranceState = newInsurance.InsuranceState,
+                        InsuranceCompany = newInsurance.InsuranceCompany,
+                        Country = newInsurance.Country
+                    };
+
+                    var affectedRows = await connection.ExecuteAsync(queryInsurance, parameters);
+
+                    if (affectedRows > 0)
+                    {
+                        return Ok("Insurance added successfully.");
+                    }
+                    else
+                    {
+                        return BadRequest("Failed to add insurance.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details (ex.Message) for debugging purposes.
+                return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+            }
+        }
+
+        
 
         public async Task<ActionResult> GetOneInsurance(string userId, int insuranceId)
         {
@@ -456,7 +567,25 @@ public class InsuranceModel
     public bool InsuranceState { get; set; }
     public decimal PaymentAmount { get; set; }
     public string PaymentUnitCurrency { get; set; }
-    public byte[] Polizze { get; set; }
+    public byte[]? Polizze { get; set; }
+    public string InsuranceCompany { get; set; }
+    public string Description { get; set; }
+    public string Country { get; set; }
+    public string Frequency { get; set; }
+}
+
+public class InsuranceModelRequest
+{
+    public string PolicyHolderId { get; set; }
+    public string InsuranceType { get; set; }
+    public decimal PaymentInstalmentAmount { get; set; }
+    public string PaymentInstalmentUnitCurrency { get; set; }
+    public DateTime DateOpened { get; set; }
+    public DateTime? DateClosed { get; set; }
+    public bool InsuranceState { get; set; }
+    public decimal PaymentAmount { get; set; }
+    public byte[] Polizze { get; set; } = null!;
+    public string PaymentUnitCurrency { get; set; }
     public string InsuranceCompany { get; set; }
     public string Description { get; set; }
     public string Country { get; set; }
