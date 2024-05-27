@@ -373,6 +373,74 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 return Ok(response);
             }
         }
+
+        public async Task<ActionResult> GetIntervallChart(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(userId);
+                }
+
+                string query = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    _logger.LogInformation("Retrieving AccountIds for user: {userId}", userId);
+                    var accountIds = await connection.QueryAsync<string>(query, new { Name = userId });
+
+                    if (accountIds == null || !accountIds.Any())
+                    {
+                        _logger.LogWarning("No AccountIds found for user: {userId}", userId);
+                        return Ok(new List<InsuranceModel>());
+                    }
+
+                    _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
+
+                    string insuranceQuery = @"SELECT * FROM finance.insurance WHERE PolicyHolderId IN @PolicyHolderIds";
+                    var insurances = await connection.QueryAsync<InsuranceModel>(insuranceQuery, new { PolicyHolderIds = accountIds });
+
+                    var results = new List<object>();
+
+                    foreach (var insurance in insurances)
+                    {
+                        // Calculate the interval payments
+                        var totalMonths = (insurance.DateClosed.HasValue ?
+                                            (insurance.DateClosed.Value - insurance.DateOpened).TotalDays :
+                                            (DateTime.Now - insurance.DateOpened).TotalDays) / 30;
+                        if (totalMonths == 0) totalMonths = 1; // To avoid division by zero
+
+                        var monthlyPayment = Math.Round(insurance.PaymentInstalmentAmount / (decimal)totalMonths, 2);
+                        var quarterPayment = Math.Round(monthlyPayment * 3, 2);
+                        var yearlyPayment = Math.Round(monthlyPayment * 12, 2);
+
+                        // Determine costs for the next month
+                        var costsNextMonth = insurance.InsuranceState && (insurance.DateClosed == null || insurance.DateClosed > DateTime.Now)
+                            ? (float)insurance.PaymentInstalmentAmount
+                            : 0;
+
+                        var result = new
+                        {
+                            monthlyPayment = (int)monthlyPayment,
+                            quarterPayment = (int)quarterPayment,
+                            yearlyPayment = (int)yearlyPayment,
+                            costsNextMonth
+                        };
+
+                        results.Add(result);
+                    }
+
+                    _logger.LogInformation("All insurance details successfully retrieved.");
+                    return Ok(results);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving insurance.");
+                return new StatusCodeResult(500);
+            }
+        }
+
     }
 }
 
@@ -392,6 +460,7 @@ public class InsuranceModel
     public string InsuranceCompany { get; set; }
     public string Description { get; set; }
     public string Country { get; set; }
+    public string Frequency { get; set; }
 }
 public class InsuranceHistoryChartRespone
 {

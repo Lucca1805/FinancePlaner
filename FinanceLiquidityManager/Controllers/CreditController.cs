@@ -34,6 +34,7 @@ namespace FinanceLiquidityManager.Controllers
 
         }
         [HttpGet("user/credit/{loanId}")]
+        [Authorize]
         public async Task<ActionResult<LoanModel>> GetOneCredit(int loanId)
         {
             var userId = User.FindFirstValue("UserId");
@@ -41,12 +42,14 @@ namespace FinanceLiquidityManager.Controllers
         }
 
         [HttpPost("user/credit")]
-        public async Task<ActionResult> AddOneCredit([FromBody] LoanModel newLoan)
+        public async Task<ActionResult> AddOneCredit([FromBody] LoanModelCreateRequest newLoan)
         {
-            return await _credit.AddOneCredit(newLoan);
+            var userId = User.FindFirstValue("UserId");
+            return await _credit.AddLoan( newLoan);
         }
 
         [HttpDelete("user/credit/{loanId}")]
+        [Authorize]
         public async Task<ActionResult> DeleteOneCredit(int loanId)
         {
             var userId = User.FindFirstValue("UserId");
@@ -54,9 +57,11 @@ namespace FinanceLiquidityManager.Controllers
         }
 
         [HttpPut("user/credit/{loanId}")]
+        [Authorize]
         public async Task<ActionResult> UpdateOneCredit(int loanId, [FromBody] LoanModel updatedLoan)
         {
-            return await _credit.UpdateOneCredit(loanId, updatedLoan);
+            var userId = User.FindFirstValue("UserId");
+            return await _credit.UpdateOneCredit(userId,loanId, updatedLoan);
         }
 
 
@@ -82,6 +87,9 @@ namespace FinanceLiquidityManager.Controllers
             var userId = User.FindFirstValue("UserId");
             return await _credit.GetAllLoansForUserBetween(userId,startDate,endDate);
         }
+
+        
+
     }
 
 

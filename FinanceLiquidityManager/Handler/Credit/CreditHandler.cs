@@ -87,47 +87,71 @@ namespace FinanceLiquidityManager.Handler.Credit
         }
 
 
-        public async Task<ActionResult> AddOneCredit([FromBody] LoanModel newLoan)
+
+        public async Task<ActionResult> AddLoan([FromBody] LoanModelCreateRequest newLoan)
         {
             try
             {
-                string query = @"
-                    INSERT INTO finance.loan (
-                        CreditorAccountId, 
-                        LoanType, 
-                        LoanAmount, 
-                        LoanUnitCurrency, 
-                        InterestRate, 
-                        InterestRateUnitCurrency, 
-                        StartDate, 
-                        EndDate, 
-                        LoanStatus, 
-                        Frequency
-                    ) VALUES (
-                        @CreditorAccountId, 
-                        @LoanType, 
-                        @LoanAmount, 
-                        @LoanUnitCurrency, 
-                        @InterestRate, 
-                        @InterestRateUnitCurrency, 
-                        @StartDate, 
-                        @EndDate, 
-                        @LoanStatus, 
-                        @Frequency
-                    );
-                    SELECT LAST_INSERT_ID();";
 
                 using (var connection = new MySqlConnection(connectionString))
                 {
-                    var loanId = await connection.ExecuteScalarAsync<int>(query, newLoan);
-                    return CreatedAtAction(nameof(GetOneCredit), new { loanId = loanId }, newLoan);
+                    string query = @"
+                        INSERT INTO finance.loan (
+                            CreditorAccountId, 
+                            LoanType, 
+                            LoanAmount, 
+                            LoanUnitCurrency, 
+                            InterestRate, 
+                            InterestRateUnitCurrency, 
+                            StartDate, 
+                            EndDate, 
+                            LoanStatus, 
+                            Frequency
+                        ) VALUES (
+                            @CreditorAccountId, 
+                            @LoanType, 
+                            @LoanAmount, 
+                            @LoanUnitCurrency, 
+                            @InterestRate, 
+                            @InterestRateUnitCurrency, 
+                            @StartDate, 
+                            @EndDate, 
+                            @LoanStatus, 
+                            @Frequency
+                        );
+                    ";
+
+                    await connection.OpenAsync();
+                    var command = new MySqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@CreditorAccountId", newLoan.CreditorAccountId);
+                    command.Parameters.AddWithValue("@LoanType", newLoan.LoanType);
+                    command.Parameters.AddWithValue("@LoanAmount", newLoan.LoanAmount);
+                    command.Parameters.AddWithValue("@LoanUnitCurrency", newLoan.LoanUnitCurrency);
+                    command.Parameters.AddWithValue("@InterestRate", newLoan.InterestRate);
+                    command.Parameters.AddWithValue("@InterestRateUnitCurrency", newLoan.InterestRateUnitCurrency);
+                    command.Parameters.AddWithValue("@StartDate", newLoan.StartDate);
+                    command.Parameters.AddWithValue("@EndDate", newLoan.EndDate);
+                    command.Parameters.AddWithValue("@LoanStatus", newLoan.LoanStatus);
+                    command.Parameters.AddWithValue("@Frequency", newLoan.Frequency);
+
+                    var affectedRows = await command.ExecuteNonQueryAsync();
+
+                    if (affectedRows > 0)
+                    {
+                        return Ok("Loan added successfully.");
+                    }
+                    else
+                    {
+                        return BadRequest("Failed to add loan.");
+                    }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return StatusCode(500, "Unable To Process Request");
             }
         }
+
 
         public async Task<ActionResult> DeleteOneCredit(string userId, int loanId)
         {
@@ -200,48 +224,7 @@ namespace FinanceLiquidityManager.Handler.Credit
         }
 
 
-        public async Task<ActionResult> UpdateOneCredit(int loanId, [FromBody] LoanModel updatedLoan)
-        {
-            if (loanId != updatedLoan.LoanId)
-            {
-                return BadRequest("LoanId mismatch");
-            }
-
-            try
-            {
-                string query = @"
-                    UPDATE finance.loan
-                    SET 
-                        CreditorAccountId = @CreditorAccountId, 
-                        LoanType = @LoanType, 
-                        LoanAmount = @LoanAmount, 
-                        LoanUnitCurrency = @LoanUnitCurrency, 
-                        InterestRate = @InterestRate, 
-                        InterestRateUnitCurrency = @InterestRateUnitCurrency, 
-                        StartDate = @StartDate, 
-                        EndDate = @EndDate, 
-                        LoanStatus = @LoanStatus, 
-                        Frequency = @Frequency
-                    WHERE LoanId = @LoanId";
-
-                using (var connection = new MySqlConnection(connectionString))
-                {
-                    var affectedRows = await connection.ExecuteAsync(query, updatedLoan);
-                    if (affectedRows > 0)
-                    {
-                        return NoContent();
-                    }
-                    else
-                    {
-                        return NotFound();
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Unable To Process Request");
-            }
-        }
+        
 
         public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUser(string userId)
         {
@@ -334,21 +317,184 @@ namespace FinanceLiquidityManager.Handler.Credit
                 return new StatusCodeResult(500);
             }
         }
+
+        public async Task<ActionResult> UpdateOneCredit(string userId, int loanId, [FromBody] LoanModel updatedLoan)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(userId);
+            }
+
+            if (loanId != updatedLoan.LoanId)
+            {
+                return BadRequest("LoanId mismatch");
+            }
+
+            try
+            {
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    // Fetch AccountIds based on the user's name
+                    string queryAccounts = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+                    var accountIds = await connection.QueryAsync<string>(queryAccounts, new { Name = userId });
+
+                    if (accountIds == null || !accountIds.Any())
+                    {
+                        return NotFound("No accounts found for the given user.");
+                    }
+
+                    // Check if the CreditorAccountId of the loan matches one of the user's account IDs
+                    if (!accountIds.Contains(updatedLoan.CreditorAccountId))
+                    {
+                        return Forbid("User is not authorized to update this loan.");
+                    }
+
+                    // Update the loan
+                    string queryUpdate = @"
+                UPDATE finance.loan
+                SET 
+                    CreditorAccountId = @CreditorAccountId, 
+                    LoanAmount = @LoanAmount, 
+                    InterestRate = @InterestRate, 
+                    StartDate = @StartDate, 
+                    EndDate = @EndDate,
+                    LoanStatus = @LoanStatus,
+                    Frequency = @Frequency
+                WHERE LoanId = @LoanId";
+
+                    var affectedRows = await connection.ExecuteAsync(queryUpdate, updatedLoan);
+                    if (affectedRows > 0)
+                    {
+                        // Calculate the next payment and payment rate
+                        var totalDays = (updatedLoan.EndDate.HasValue ?
+                                         (updatedLoan.EndDate.Value - updatedLoan.StartDate).TotalDays :
+                                         (DateTime.Now - updatedLoan.StartDate).TotalDays);
+                        if (totalDays == 0) totalDays = 1; // To avoid division by zero
+
+                        var frequencyFactor = 1;
+                        switch (updatedLoan.Frequency.ToLower())
+                        {
+                            case "monthly":
+                                frequencyFactor = 1;
+                                break;
+                            case "quarterly":
+                                frequencyFactor = 3;
+                                break;
+                            case "yearly":
+                                frequencyFactor = 12;
+                                break;
+                            default:
+                                frequencyFactor = 1; // default to monthly
+                                break;
+                        }
+
+                        var totalPeriods = (totalDays / 30) / frequencyFactor;
+                        if (totalPeriods == 0) totalPeriods = 1; // To avoid division by zero
+
+                        var paymentRate = Math.Round(updatedLoan.LoanAmount / (decimal)totalPeriods, 2);
+
+                        // Calculate the next payment date based on frequency
+                        DateTime nextPaymentDate;
+                        switch (updatedLoan.Frequency.ToLower())
+                        {
+                            case "monthly":
+                                nextPaymentDate = DateTime.Now.AddMonths(1);
+                                break;
+                            case "quarterly":
+                                nextPaymentDate = DateTime.Now.AddMonths(3);
+                                break;
+                            case "yearly":
+                                nextPaymentDate = DateTime.Now.AddYears(1);
+                                break;
+                            default:
+                                nextPaymentDate = DateTime.Now.AddMonths(1); // default to monthly
+                                break;
+                        }
+
+                        var result = new
+                        {
+                            updatedLoan.LoanId,
+                            updatedLoan.CreditorAccountId,
+                            updatedLoan.LoanAmount,
+                            updatedLoan.InterestRate,
+                            updatedLoan.StartDate,
+                            updatedLoan.EndDate,
+                            updatedLoan.LoanStatus,
+                            updatedLoan.Frequency,
+                            nextPayment = nextPaymentDate,
+                            paymentRate = (int)paymentRate
+                        };
+
+                        return Ok(result);
+                    }
+                    else
+                    {
+                        return NotFound();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating the loan.");
+                return StatusCode(500, "Unable To Process Request");
+            }
+        }
+
     }
 
     public class LoanModel
     {
         public int LoanId { get; set; }
         public string CreditorAccountId { get; set; }
-        public string LoanType { get; set; }
         public decimal LoanAmount { get; set; }
-        public string LoanUnitCurrency { get; set; }
         public decimal InterestRate { get; set; }
-        public string InterestRateUnitCurrency { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-        public string LoanStatus { get; set; }
-        public string Frequency { get; set; }
+        public string? Frequency { get; set; }
+        public string? LoanStatus { get; set; }
+        public string? InterestRateUnitCurrency { get; set; }
+        public string? LoanUnitCurrency { get; set; }
+
+    }
+
+    public class LoanModelCreateRequest
+    {
+        public string CreditorAccountId { get; set; }
+        public string LoanType { get; set; }
+        public decimal LoanAmount { get; set; }
+        public decimal InterestRate { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? Frequency { get; set; }
+        public string? LoanStatus { get; set; }
+        public string? InterestRateUnitCurrency { get; set; }
+        public string? LoanUnitCurrency { get; set; }
+
+    }
+
+    public class LoanUpdateRequest
+    {
+        public string Id { get; set; }
+        public string IBAN { get; set; }
+        public string StartingDate { get; set; }
+        public float InterestRate { get; set; }
+        public float LoanAmount { get; set; }
+    }
+
+    public class LoanResponse
+    {
+        public string Id { get; set; }
+        public string IBAN { get; set; }
+        public float AdditionalCosts { get; set; }
+        public int Runtime { get; set; }
+        public string StartingDate { get; set; }
+        public float InterestRate { get; set; }
+        public float EffectiveInterestRate { get; set; }
+        public float LoanAmount { get; set; }
+        public float TotalAmount { get; set; }
+        public string PaymentRate { get; set; }
+        public string NextPayment { get; set; }
+        public List<string> Documents { get; set; }
     }
 
     public class AccountModel
