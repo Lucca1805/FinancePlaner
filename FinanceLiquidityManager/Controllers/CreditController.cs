@@ -42,10 +42,11 @@ namespace FinanceLiquidityManager.Controllers
         }
 
         [HttpPost("user/credit")]
+        [Authorize]
         public async Task<ActionResult> AddOneCredit([FromBody] LoanModelCreateRequest newLoan)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _credit.AddLoan( newLoan);
+            return await _credit.AddLoan(userId, newLoan);
         }
 
         [HttpDelete("user/credit/{loanId}")]
