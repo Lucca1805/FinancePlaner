@@ -67,5 +67,14 @@ namespace FinanceLiquidityManager.Controllers
             var currency = User.FindFirstValue("CurrencyPreference");
             return await _insurance.getCostHistoryData(userId,currency);
         }
+
+        [HttpGet("user/insurance/intervallChart")]
+        [Authorize]
+        public async Task<ActionResult> GetIntervallChart()
+        {
+            var userId = User.FindFirstValue("UserId");
+            return await _insurance.GetIntervallChart(userId);
+        }
+
     }
 }
