@@ -40,8 +40,8 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        
-        public async Task<ActionResult<IEnumerable<StandingOrder>>> GetAllStandingordersForUser(string userId)
+
+        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUser(string userId)
         {
             try
             {
@@ -71,13 +71,64 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                     foreach (var accountId in accountIds)
                     {
                         _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountId);
-                        string loanQuery = @"SELECT * FROM finance.standingOrders WHERE CreditorAccountId = @CreditorAccountId";
+                        string loanQuery = @"Select s.* , t.MerchantName AS Issuer From finance.standingOrders s JOIN finance.transactions t on t.TransactionInformation = s.Reference WHERE s.CreditorAccountId = @CreditorAccountId AND t.AccountId = @CreditorAccountId";
                         var standingOrders = await connection.QueryAsync<StandingOrder>(loanQuery, new { CreditorAccountId = accountId });
                         allStandingOrders.AddRange(standingOrders);
                     }
+                    List<StandingOrderResponse> response = new List<StandingOrderResponse>();
+                    foreach (var order in allStandingOrders)
+                    {
+                        DateTime today = DateTime.Today;
+                        DateTime nextPaymentDate = today;
+                        if (order.Frequency == "Monthly")
+                        {
+                            DateTime nextMonth = today.AddMonths(1);
+                            nextPaymentDate = new DateTime(nextMonth.Year, nextMonth.Month, 1);
+                        }
+                        else if (order.Frequency == "Quarterly")
+                        {
+                            int currentQuarter = (today.Month - 1) / 3 + 1;
+                            int nextQuarter = (currentQuarter + 1) % 5;
+                            nextPaymentDate = new DateTime(today.Year, (nextQuarter - 1) * 3 + 1, 1);
+                        }
+                        else if (order.Frequency == "Annually")
+                        {
+                            nextPaymentDate = new DateTime(today.Year + 1, 1, 1);
+                        }
+                        else if (order.Frequency == "Bi-Weekly")
+                        {
+                            if (today.Day <= 15)
+                            {
+                                // Select the 15th of the current month
+                                nextPaymentDate = new DateTime(today.Year, today.Month, 15);
+                            }
+                            else
+                            {
+                                // Select the 1st of the next month
+                                nextPaymentDate = today.AddMonths(1);
+                                nextPaymentDate = new DateTime(nextPaymentDate.Year, nextPaymentDate.Month, 1);
+                            }
+                        }
+                        StandingOrderResponse StandingOrderRes = new StandingOrderResponse
+                        {
+                            OrderId = order.OrderId,
+                            CreditorAccountId = order.CreditorAccountId,
+                            Frequency = order.Frequency,
+                            NumberOfPayments = order.NumberOfPayments,
+                            FirstPaymentDateTime = order.FirstPaymentDateTime,
+                            FinalPaymentDateTime = order.FinalPaymentDateTime,
+                            Reference = order.Reference,
+                            PaymentAmount = order.PaymentAmount,
+                            PaymentCurrency = order.PaymentCurrency,
+                            Issuer = order.Issuer,
+                            NextPayment = nextPaymentDate
+                        };
+                        response.Add(StandingOrderRes);
+                    }
+
 
                     _logger.LogInformation("All standingOrders successfully retrieved.");
-                    return Ok(allStandingOrders);
+                    return Ok(response);
                 }
             }
             catch (Exception ex)
@@ -87,7 +138,7 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
             }
         }
 
-        public async Task<ActionResult<IEnumerable<StandingOrder>>> GetAllStandingordersForUserByTime(string userId, DateTime dateTime)
+        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUserByTime(string userId, DateTime dateTime)
         {
             try
             {
@@ -117,15 +168,64 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                     foreach (var accountId in accountIds)
                     {
                         _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountId);
-                        string loanQuery = @"SELECT * FROM standingOrders WHERE CreditorAccountId = @CreditorAccountId AND @dateTime >= FirstPaymentDateTime"; ;
-                        var standingOrders = await connection.QueryAsync<StandingOrder>(loanQuery, new { CreditorAccountId = accountId, dateTime});
+                        string loanQuery = @"Select s.* , t.MerchantName AS Issuer From finance.standingOrders s JOIN finance.transactions t on t.TransactionInformation = s.Reference WHERE s.CreditorAccountId = @CreditorAccountId AND t.AccountId = @CreditorAccountId AND @dateTime >= s.FirstPaymentDateTime";
+                        var standingOrders = await connection.QueryAsync<StandingOrder>(loanQuery, new { CreditorAccountId = accountId, dateTime });
                         allStandingOrders.AddRange(standingOrders);
                     }
+                    List<StandingOrderResponse> response = new List<StandingOrderResponse>();
+                    foreach (var order in allStandingOrders)
+                    {
+                        DateTime today = DateTime.Today;
+                        DateTime nextPaymentDate = today;
+                        if (order.Frequency == "Monthly")
+                        {
+                            DateTime nextMonth = today.AddMonths(1);
+                            nextPaymentDate = new DateTime(nextMonth.Year, nextMonth.Month, 1);
+                        }
+                        else if (order.Frequency == "Quarterly")
+                        {
+                            int currentQuarter = (today.Month - 1) / 3 + 1;
+                            int nextQuarter = (currentQuarter + 1) % 5;
+                            nextPaymentDate = new DateTime(today.Year, (nextQuarter - 1) * 3 + 1, 1);
+                        }
+                        else if (order.Frequency == "Annually")
+                        {
+                            nextPaymentDate = new DateTime(today.Year + 1, 1, 1);
+                        }
+                        else if (order.Frequency == "Bi-Weekly")
+                        {
+                            if (today.Day <= 15)
+                            {
+                                // Select the 15th of the current month
+                                nextPaymentDate = new DateTime(today.Year, today.Month, 15);
+                            }
+                            else
+                            {
+                                // Select the 1st of the next month
+                                nextPaymentDate = today.AddMonths(1);
+                                nextPaymentDate = new DateTime(nextPaymentDate.Year, nextPaymentDate.Month, 1);
+                            }
+                        }
+                        StandingOrderResponse StandingOrderRes = new StandingOrderResponse
+                        {
+                            OrderId = order.OrderId,
+                            CreditorAccountId = order.CreditorAccountId,
+                            Frequency = order.Frequency,
+                            NumberOfPayments = order.NumberOfPayments,
+                            FirstPaymentDateTime = order.FirstPaymentDateTime,
+                            FinalPaymentDateTime = order.FinalPaymentDateTime,
+                            Reference = order.Reference,
+                            PaymentAmount = order.PaymentAmount,
+                            PaymentCurrency = order.PaymentCurrency,
+                            Issuer = order.Issuer,
+                            NextPayment = nextPaymentDate
+                        };
+                        response.Add(StandingOrderRes);
+                    }
 
-            
 
                     _logger.LogInformation("All standingOrders successfully retrieved.");
-                    return Ok(allStandingOrders);
+                    return Ok(response);
                 }
             }
             catch (Exception ex)
@@ -138,6 +238,21 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
 
     }
 
+    public class StandingOrderResponse
+    {
+
+        public int OrderId { get; set; }
+        public string CreditorAccountId { get; set; } = null!;
+        public string Frequency { get; set; } = null!;
+        public int? NumberOfPayments { get; set; }
+        public DateTime FirstPaymentDateTime { get; set; }
+        public DateTime? FinalPaymentDateTime { get; set; }
+        public string Reference { get; set; } = null!;
+        public decimal PaymentAmount { get; set; }
+        public string PaymentCurrency { get; set; }
+        public string Issuer { get; set; }
+        public DateTime NextPayment { get; set; }
+    }
     public class StandingOrder
     {
         public int OrderId { get; set; }
@@ -147,6 +262,9 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
         public DateTime FirstPaymentDateTime { get; set; }
         public DateTime? FinalPaymentDateTime { get; set; }
         public string Reference { get; set; } = null!;
+        public decimal PaymentAmount { get; set; }
+        public string PaymentCurrency { get; set; }
+        public string Issuer { get; set; }
     }
 
     public class AccountModel
