@@ -81,6 +81,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 }
                 if (request.DateTo.HasValue)
                 {
+                    request.DateTo = request.DateTo.AddDays(1);
                     queryBuilder.Append(" AND t.BookingDateTime <= @DateTo");
                 }
                 var transactions = await connection.QueryAsync<TransactionResponse>(queryBuilder.ToString(), new
