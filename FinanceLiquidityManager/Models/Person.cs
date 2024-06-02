@@ -18,6 +18,8 @@ namespace FinanceLiquidityManager.Models
         public string UserName { get; set; } = null!;
         public string Password { get; set; } = null!;
 
+        public string CurrencyPreference {get; set;}
+
         public virtual ICollection<Account> Accounts { get; set; }
     }
 }

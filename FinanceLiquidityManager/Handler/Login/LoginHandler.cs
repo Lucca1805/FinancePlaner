@@ -78,7 +78,7 @@ namespace FinanceLiquidityManager.Handler.Login
                     {
                             new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
                             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                            new Claim("CurrencyPreference","€"),
+                            new Claim("CurrencyPreference",user.CurrencyPreference),
                             new Claim("UserId", user.PersonId.ToString())
                         };
 

@@ -65,7 +65,7 @@ namespace FinanceLiquidityManager.Handler.BankAccount
                     foreach (var accountId in accountIds)
                     {
                         _logger.LogInformation("Fetching loans for AccountId: {accountId}", accountId);
-                        string bankAccountQuery = @"DELETE * FROM finance.bank_account WHERE AccountId = @AccountId";
+                        string bankAccountQuery = @"DELETE FROM finance.bank_account WHERE AccountId = @AccountId";
                         var affectedRows = await connection.ExecuteAsync(bankAccountQuery, new { AccountId = accountId });
                         if (affectedRows > 0)
                         {

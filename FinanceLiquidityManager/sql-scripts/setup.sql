@@ -9,7 +9,8 @@ CREATE TABLE finance.person (
     PersonId int AUTO_INCREMENT PRIMARY KEY,
     Email varchar(100)  NOT NULL,
     UserName varchar(70)  NOT NULL,
-    Password varchar(60)  NOT NULL
+    Password varchar(60)  NOT NULL,
+    CurrencyPreference varchar(3) NOT NULL
 ) COMMENT 'Keeps information about each person that interacts with the bank';
 
 CREATE TABLE finance.accounts (
@@ -166,17 +167,17 @@ CREATE TABLE finance.transactions (
     FOREIGN KEY (AccountId) REFERENCES accounts(AccountId)
 );
 
-INSERT INTO finance.person (Email, UserName, Password) VALUES
-('person1@example.com', 'user1', '$2b$12$YsyA7BgyKgzHVvxlMHSRtOxpncpzchK1EFIMZGmrrwbR0zlXcAIHu'), -- password1
-('person2@example.com', 'user2', '$2a$12$e8BJkWeGywFz0drfp5e40OYBJd2rQYrYcR5H4EX9hM5lVRfuJoWQu'), -- password2
-('person3@example.com', 'user3', '$2a$12$u6hb9A1QY.3FQOafzE8qQOQ.YMdsI/PojpfxRGIpjKoU2fU5dLRr2'), -- password3
-('person4@example.com', 'user4', '$2a$12$qE.yqWVgEOY1Shb04GdBvevN.Kedc1NftPZx6EB7nK7GiYvMz6pi2'), -- password4
-('person5@example.com', 'user5', '$2a$12$ClmTUsqIn9UovPVST3H6BuoM8XrCxXnbV5F2zWnAfk8RxY5QUmuKO'), -- password5
-('person6@example.com', 'user6', '$2a$12$M/fEgSHJERjI.RHDJ4Kye.KJGQ0soF4wsJStN10KnE63yQIqZflue'), -- password6
-('person7@example.com', 'user7', '$2a$12$4.A0ZDi1TPlA6sF1YRXMpeHk26uPQhbP4Q5icZjApyyC3Te.1mY8G'), -- password7
-('person8@example.com', 'user8', '$2a$12$EDqNqggz3J7.1HUzwQspXeNYN6dB80pYI9A5hO1.yG2fw.bmE1xDi'), -- password8
-('person9@example.com', 'user9', '$2a$12$k/qL8MtI4J44ctY0MQUCTu0iJf9VgXTRIbmM60r8oiyPx8XtKROD2'), -- password9
-('person10@example.com', 'user10', '$2a$12$R5T4N44cBh9NN6CmR5Ub6OC98Jfkgk1zK4hPiLRpVXfaVbCZlmybO'); -- password10
+INSERT INTO finance.person (Email, UserName, Password,CurrencyPreference) VALUES
+('person1@example.com', 'user1', '$2b$12$YsyA7BgyKgzHVvxlMHSRtOxpncpzchK1EFIMZGmrrwbR0zlXcAIHu','EUR'), -- password1
+('person2@example.com', 'user2', '$2a$12$e8BJkWeGywFz0drfp5e40OYBJd2rQYrYcR5H4EX9hM5lVRfuJoWQu','EUR'), -- password2
+('person3@example.com', 'user3', '$2a$12$u6hb9A1QY.3FQOafzE8qQOQ.YMdsI/PojpfxRGIpjKoU2fU5dLRr2','EUR'), -- password3
+('person4@example.com', 'user4', '$2a$12$qE.yqWVgEOY1Shb04GdBvevN.Kedc1NftPZx6EB7nK7GiYvMz6pi2','EUR'), -- password4
+('person5@example.com', 'user5', '$2a$12$ClmTUsqIn9UovPVST3H6BuoM8XrCxXnbV5F2zWnAfk8RxY5QUmuKO','EUR'), -- password5
+('person6@example.com', 'user6', '$2a$12$M/fEgSHJERjI.RHDJ4Kye.KJGQ0soF4wsJStN10KnE63yQIqZflue','USD'), -- password6
+('person7@example.com', 'user7', '$2a$12$4.A0ZDi1TPlA6sF1YRXMpeHk26uPQhbP4Q5icZjApyyC3Te.1mY8G','USD'), -- password7
+('person8@example.com', 'user8', '$2a$12$EDqNqggz3J7.1HUzwQspXeNYN6dB80pYI9A5hO1.yG2fw.bmE1xDi','USD'), -- password8
+('person9@example.com', 'user9', '$2a$12$k/qL8MtI4J44ctY0MQUCTu0iJf9VgXTRIbmM60r8oiyPx8XtKROD2','USD'), -- password9
+('person10@example.com', 'user10', '$2a$12$R5T4N44cBh9NN6CmR5Ub6OC98Jfkgk1zK4hPiLRpVXfaVbCZlmybO','USD'); -- password10
 
 -- Insert Accounts for each Person
 INSERT INTO finance.accounts (AccountId, Currency, AccountType, AccountSubType, Nickname, SchemeName, Identification, Name, SecondaryIdentification) VALUES
