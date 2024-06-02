@@ -44,9 +44,9 @@ namespace FinanceLiquidityManager.Controllers
             return await _insurance.GetOneInsurance(userId, insuranceId);
         }
 
-        [HttpGet("user/insurances/{policyHolderId}")]
+        [HttpGet("user/insurances")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<InsuranceModel>>> GetAllInsuranceForUser()
+        public async Task<ActionResult<IEnumerable<InsuranceResponse>>> GetAllInsuranceForUser()
         {
             var userId = User.FindFirstValue("UserId");
             return await _insurance.GetAllInsuranceForUser(userId);

@@ -150,7 +150,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             }
         }
 
-        
+
 
         public async Task<ActionResult> GetOneInsurance(string userId, int insuranceId)
         {
@@ -195,7 +195,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             }
         }
 
-        public async Task<ActionResult<IEnumerable<InsuranceModel>>> GetAllInsuranceForUser(string userId)
+        public async Task<ActionResult<IEnumerable<InsuranceResponse>>> GetAllInsuranceForUser(string userId)
         {
             try
             {
@@ -215,21 +215,41 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     if (accountIds == null || !accountIds.Any())
                     {
                         _logger.LogWarning("No AccountIds found for user: {userId}", userId);
-                        return Ok(new List<InsuranceModel>()); // Return empty list
+                        return Ok(new List<InsuranceResponse>()); // Return empty list
                     }
 
                     _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
 
                     // Fetch insurances for each AccountId
-                    List<InsuranceModel> allStandingOrders = new List<InsuranceModel>();
+                    List<InsuranceResponse> allStandingOrders = new List<InsuranceResponse>();
                     foreach (var accountId in accountIds)
                     {
                         _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountId);
                         string insuranceQuery = @"SELECT * FROM finance.insurance WHERE PolicyHolderId = @PolicyHolderId";
-                        var standingOrders = await connection.QueryAsync<InsuranceModel>(insuranceQuery, new { PolicyHolderId = accountId });
+                        var standingOrders = await connection.QueryAsync<InsuranceResponse>(insuranceQuery, new { PolicyHolderId = accountId });
                         allStandingOrders.AddRange(standingOrders);
                     }
-
+                    foreach (InsuranceResponse insurance in allStandingOrders)
+                    {
+                        DateTime today = DateTime.Today;
+                        DateTime nextPaymentDate = today;
+                        if (insurance.Frequency == "Monthly")
+                        {
+                            DateTime nextMonth = today.AddMonths(1);
+                            nextPaymentDate = new DateTime(nextMonth.Year, nextMonth.Month, 1);
+                        }
+                        else if (insurance.Frequency == "Quarterly")
+                        {
+                            int currentQuarter = (today.Month - 1) / 3 + 1;
+                            int nextQuarter = (currentQuarter + 1) % 5;
+                            nextPaymentDate = new DateTime(today.Year, (nextQuarter - 1) * 3 + 1, 1);
+                        }
+                        else if (insurance.Frequency == "Annually")
+                        {
+                            nextPaymentDate = new DateTime(today.Year + 1, 1, 1);
+                        }
+                        insurance.nextPayment = nextPaymentDate;
+                    }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
                     return Ok(allStandingOrders);
                 }
@@ -350,14 +370,15 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     PaymentInstalmentAmount = @PaymentInstalmentAmount, 
                     PaymentInstalmentUnitCurrency = @PaymentInstalmentUnitCurrency, 
                     DateOpened = @DateOpened, 
-                    DateClosed = @DateClosed, 
+                    DateClosed = @DateClosed,
                     InsuranceState = @InsuranceState, 
                     PaymentAmount = @PaymentAmount, 
                     PaymentUnitCurrency = @PaymentUnitCurrency, 
                     Polizze = @Polizze, 
                     InsuranceCompany = @InsuranceCompany, 
                     Description = @Description, 
-                    Country = @Country
+                    Country = @Country,
+                    Frequency = @Frequency
                 WHERE InsuranceId = @InsuranceId";
 
                     var affectedRows = await connection.ExecuteAsync(updateQuery, updatedInsurance);
@@ -404,7 +425,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     _logger.LogInformation("Fetching Insurances for AccountId: {accountId}", accountId);
                     string insuranceaccountQuery = @"SELECT InsuranceType as type, PaymentInstalmentAmount as Cost, PaymentInstalmentUnitCurrency as Currency, Frequency as intervall  FROM finance.insurance WHERE PolicyHolderId = @AccountId";
                     var insuranceContent = (await connection.QueryAsync<InsuranceQueryModel>(insuranceaccountQuery, new { AccountId = accountId })).ToList();
-                    
+
                     foreach (var content in insuranceContent)
                     {
                         if (currency != content.Currency)
@@ -419,7 +440,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                 response.InsuranceCosts.Add(
                                     new InsuranceCost
                                     {
-                                        Cost = Math.Round(content.Cost,2),
+                                        Cost = Math.Round(content.Cost, 2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(monthCounter)
@@ -451,7 +472,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                 response.InsuranceCosts.Add(
                                     new InsuranceCost
                                     {
-                                        Cost = Math.Round(content.Cost,2),
+                                        Cost = Math.Round(content.Cost, 2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(month)
@@ -469,7 +490,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
                                     new InsuranceCost
                                     {
-                                        Cost = Math.Round(content.Cost,2),
+                                        Cost = Math.Round(content.Cost, 2),
                                         Currency = currency,
                                         Insurance = content.Type,
                                         Month = MonthConverter.GetMonthName(monthCounter)
@@ -503,16 +524,18 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     if (accountIds == null || !accountIds.Any())
                     {
                         _logger.LogWarning("No AccountIds found for user: {userId}", userId);
-                        return Ok(new List<InsuranceModel>());
+                        return Ok(new List<InsuranceResponse>());
                     }
 
                     _logger.LogInformation("Retrieved AccountIds: {accountIds}", string.Join(", ", accountIds));
 
                     string insuranceQuery = @"SELECT * FROM finance.insurance WHERE PolicyHolderId IN @PolicyHolderIds";
-                    var insurances = await connection.QueryAsync<InsuranceModel>(insuranceQuery, new { PolicyHolderIds = accountIds });
+                    var insurances = await connection.QueryAsync<InsuranceResponse>(insuranceQuery, new { PolicyHolderIds = accountIds });
 
-                    var results = new List<object>();
-
+                    decimal monthlyCost = 0;
+                    decimal quarterCost = 0;
+                    decimal yearlyCost = 0;
+                    decimal NextMonthCosts = 0;
                     foreach (var insurance in insurances)
                     {
                         // Calculate the interval payments
@@ -527,22 +550,23 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
                         // Determine costs for the next month
                         var costsNextMonth = insurance.InsuranceState && (insurance.DateClosed == null || insurance.DateClosed > DateTime.Now)
-                            ? (float)insurance.PaymentInstalmentAmount
+                            ? (decimal)insurance.PaymentInstalmentAmount
                             : 0;
 
-                        var result = new
-                        {
-                            monthlyPayment = (int)monthlyPayment,
-                            quarterPayment = (int)quarterPayment,
-                            yearlyPayment = (int)yearlyPayment,
-                            costsNextMonth
-                        };
-
-                        results.Add(result);
+                        monthlyCost += monthlyCost + monthlyPayment;
+                        quarterCost += quarterCost + quarterPayment;
+                        yearlyCost += yearlyCost + yearlyPayment;
+                        NextMonthCosts += NextMonthCosts + costsNextMonth;
                     }
-
+                    var retVal = new
+                    {
+                        monthlyPayment = monthlyCost,
+                        quarterlyPayment = quarterCost,
+                        yearlyPayment = yearlyCost,
+                        costsNextMonth = NextMonthCosts
+                    };
                     _logger.LogInformation("All insurance details successfully retrieved.");
-                    return Ok(results);
+                    return Ok(retVal);
                 }
             }
             catch (Exception ex)
@@ -573,7 +597,26 @@ public class InsuranceModel
     public string Country { get; set; }
     public string Frequency { get; set; }
 }
-
+public class InsuranceResponse
+{
+    public int InsuranceId { get; set; }
+    public string PolicyHolderId { get; set; }
+    public string InsuranceType { get; set; }
+    public decimal PaymentInstalmentAmount { get; set; }
+    public string PaymentInstalmentUnitCurrency { get; set; }
+    public DateTime DateOpened { get; set; }
+    public DateTime? DateClosed { get; set; }
+    public bool InsuranceState { get; set; }
+    public decimal PaymentAmount { get; set; }
+    public string PaymentUnitCurrency { get; set; }
+    public byte[]? Polizze { get; set; }
+    public string InsuranceCompany { get; set; }
+    public string Description { get; set; }
+    public string Country { get; set; }
+    public string Frequency { get; set; }
+    public DateTime nextPayment { get; set; }
+    
+}
 public class InsuranceModelRequest
 {
     public string PolicyHolderId { get; set; }
