@@ -71,7 +71,7 @@ namespace FinanceLiquidityManager.Handler.Credit
                     // Fetch insurances for each AccountId
 
                     _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountIds);
-                    string loanQuery = @"SELECT * FROM finance.loan WHERE LoanId = @LoanId";
+                    string loanQuery = @"SELECT l.*, f.FileInfo, f.FileType FROM finance.loan l LEFT JOIN finance.files f ON f.RefID = l.LoanId WHERE l.LoanId = @LoanId;";
                     var insurance = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountIds, loanId });
 
 
@@ -124,8 +124,12 @@ namespace FinanceLiquidityManager.Handler.Credit
                     InterestRateUnitCurrency, 
                     StartDate, 
                     EndDate, 
-                    LoanStatus, 
-                    Frequency
+                    LoanStatus,
+                    Frequency,
+                    loanName,
+                    loanTerm,
+                    additionalCosts,
+                    effectiveInterestRate
                 ) VALUES (
                     @CreditorAccountId, 
                     @LoanType, 
@@ -136,7 +140,11 @@ namespace FinanceLiquidityManager.Handler.Credit
                     @StartDate, 
                     @EndDate, 
                     @LoanStatus, 
-                    @Frequency
+                    @Frequency,
+                    @loanName,
+                    @loanTerm,
+                    @additionalCosts,
+                    @effectiveInterestRate
                 );
             ";
 
@@ -152,7 +160,10 @@ namespace FinanceLiquidityManager.Handler.Credit
                     command.Parameters.AddWithValue("@EndDate", newLoan.EndDate);
                     command.Parameters.AddWithValue("@LoanStatus", newLoan.LoanStatus);
                     command.Parameters.AddWithValue("@Frequency", newLoan.Frequency);
-
+                    command.Parameters.AddWithValue("@loanName", newLoan.loanName);
+                    command.Parameters.AddWithValue("@loanTerm", newLoan.loanTerm);
+                    command.Parameters.AddWithValue("@additionalCosts", newLoan.additionalCosts);
+                    command.Parameters.AddWithValue("@effectiveInterestRate", newLoan.effectiveInterestRate);
                     var affectedRows = await command.ExecuteNonQueryAsync();
 
                     if (affectedRows > 0)
@@ -201,11 +212,11 @@ namespace FinanceLiquidityManager.Handler.Credit
                         {
                             // Delete dependent records in the files table
                             string deleteFilesQuery = @"DELETE FROM finance.files WHERE RefID = @LoanId";
-                            await connection.ExecuteAsync(deleteFilesQuery, new { LoandId = loanId }, transaction);
+                            await connection.ExecuteAsync(deleteFilesQuery, new { LoanId = loanId }, transaction);
 
                             // Delete the credit record
                             string deleteCreditQuery = @"DELETE FROM finance.loan WHERE LoanId = @LoanId";
-                            var affectedRows = await connection.ExecuteAsync(deleteCreditQuery, new { LoandId = loanId }, transaction);
+                            var affectedRows = await connection.ExecuteAsync(deleteCreditQuery, new { LoanId = loanId }, transaction);
 
                             // Commit the transaction if successful
                             await transaction.CommitAsync();
@@ -379,7 +390,10 @@ namespace FinanceLiquidityManager.Handler.Credit
                     StartDate = @StartDate, 
                     EndDate = @EndDate,
                     LoanStatus = @LoanStatus,
-                    Frequency = @Frequency
+                    Frequency = @Frequency,
+                    loanName = @loanName,
+                    loanTerm = @loanTerm,
+                    additionalCosts = @additionalCosts
                 WHERE LoanId = @LoanId";
 
                     var affectedRows = await connection.ExecuteAsync(queryUpdate, updatedLoan);
@@ -441,6 +455,9 @@ namespace FinanceLiquidityManager.Handler.Credit
                             updatedLoan.EndDate,
                             updatedLoan.LoanStatus,
                             updatedLoan.Frequency,
+                            updatedLoan.loanName,
+                            updatedLoan.loanTerm,
+                            updatedLoan.additionalCosts,
                             nextPayment = nextPaymentDate,
                             paymentRate = (int)paymentRate
                         };
@@ -475,6 +492,12 @@ namespace FinanceLiquidityManager.Handler.Credit
         public string? InterestRateUnitCurrency { get; set; }
         public string? LoanUnitCurrency { get; set; }
 
+        public string? loanName {get; set;}
+        public int loanTerm {get; set;}
+        public decimal? additionalCosts {get; set;}
+        public string? FileInfo {get; set;}
+        public string? FileType {get; set;}
+
     }
 
     public class LoanModelCreateRequest
@@ -489,6 +512,10 @@ namespace FinanceLiquidityManager.Handler.Credit
         public string? LoanStatus { get; set; }
         public string? InterestRateUnitCurrency { get; set; }
         public string? LoanUnitCurrency { get; set; }
+        public string? loanName {get; set;}
+        public int loanTerm {get; set;}
+        public decimal? additionalCosts {get; set;}
+        public decimal? effectiveInterestRate {get; set;}
 
     }
 

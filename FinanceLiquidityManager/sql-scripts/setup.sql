@@ -68,18 +68,22 @@ CREATE TABLE finance.insurance (
 );
 
 
--- Table: loan
+-- Table: loan loanTerm = Angabe der Dauer des loan ins Tagen
 CREATE TABLE finance.loan (
     LoanId int AUTO_INCREMENT PRIMARY KEY,
     CreditorAccountId VARCHAR(40) NOT NULL,
-    LoanType varchar(20)  NOT NULL,
+    LoanType VARCHAR(20) NOT NULL,
+    loanName VARCHAR(40),
+    loanTerm int,
+    additionalCosts DECIMAL(13,5),
+    effectiveInterestRate DECIMAL(13,5),
     LoanAmount DECIMAL(13, 5) NOT NULL,
     LoanUnitCurrency VARCHAR(3),  
     InterestRate DECIMAL(13, 5) NOT NULL,
     InterestRateUnitCurrency VARCHAR(3),  
     StartDate TIMESTAMP NOT NULL,
     EndDate TIMESTAMP,
-    LoanStatus varchar(20)  NOT NULL,
+    LoanStatus VARCHAR(20) NOT NULL,
     Frequency VARCHAR(35) NOT NULL COMMENT 'Zahlungsinterval',
     CONSTRAINT CHK_LoanUnitCurrency CHECK (LoanUnitCurrency IN ('USD', 'EUR', 'GBP')),
     CONSTRAINT CHK_InterestRateUnitCurrency CHECK (InterestRateUnitCurrency IN ('USD', 'EUR', 'GBP')),
@@ -252,17 +256,17 @@ INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, PaymentInstalmentA
 ('ACC1012', 'Life', 250.75, 'EUR', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 3000.00, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly');
 
 -- Insert Loans per User (3 loans per user)
-INSERT INTO finance.loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency) VALUES
-('ACC1001', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1002', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly'),
-('ACC1003', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1004', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1005', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly'),
-('ACC1006', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1007', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1008', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly'),
-('ACC1009', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly'),
-('ACC1010', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly');
+INSERT INTO finance.loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency, loanName, loanTerm, additionalCosts, effectiveInterestRate) VALUES
+('ACC1001', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly','Mortage',7300,0.00,3.5),
+('ACC1002', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly','Car',1825,0.00,1.9),
+('ACC1003', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly',1825,3650,0.00,2.5),
+('ACC1004', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly','Mortage',7300,0.00,3.5),
+('ACC1005', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly','Car',3650,0.00,1.9),
+('ACC1006', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly','Student',1825,0.00,2.5),
+('ACC1007', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly','Mortage',7300,0.00,3.5),
+('ACC1008', 'Car Loan', 20000.00, 'USD', 1.9, 'USD', '2021-10-01 09:00:00', '2025-10-01 09:00:00', 'Active', 'Monthly','Car',3650,0.00,1.9),
+('ACC1009', 'Student Loan', 30000.00, 'USD', 2.5, 'USD', '2021-07-01 09:00:00', '2028-07-01 09:00:00', 'Active', 'Monthly','Student',1825,0.00,2.5),
+('ACC1010', 'Mortgage', 250000.00, 'USD', 3.5, 'USD', '2020-07-01 09:00:00', '2030-07-01 09:00:00', 'Active', 'Monthly','Mortage',7300,0.00,3.5);
 
 -- Insert 50 Standing Orders
 INSERT INTO finance.standingOrders (CreditorAccountId, Frequency, NumberOfPayments, FirstPaymentDateTime, FinalPaymentDateTime, Reference) VALUES
