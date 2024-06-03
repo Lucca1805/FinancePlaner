@@ -127,16 +127,14 @@ namespace FinanceLiquidityManager.Handler.Person
 
                 string insertInsuranceQuery = @"
                     INSERT INTO finance.insurance 
-                    (PolicyHolderId, InsuranceType, PaymentInstalmentAmount, PaymentInstalmentUnitCurrency, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country, Frequency) 
+                    (PolicyHolderId, InsuranceType, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country, Frequency) 
                     VALUES
-                    (@PolicyHolderId, @InsuranceType, @PaymentInstalmentAmount, @PaymentInstalmentUnitCurrency, @DateOpened, @DateClosed, @InsuranceState, @PaymentAmount, @PaymentUnitCurrency, @Polizze, @InsuranceCompany, @Description, @Country, @Frequency)";
+                    (@PolicyHolderId, @InsuranceType, @DateOpened, @DateClosed, @InsuranceState, @PaymentAmount, @PaymentUnitCurrency, @Polizze, @InsuranceCompany, @Description, @Country, @Frequency)";
 
                 var insuranceParameters1 = new
                 {
                     PolicyHolderId = newAccountId,
                     InsuranceType = "Health",
-                    PaymentInstalmentAmount = 150.50,
-                    PaymentInstalmentUnitCurrency = currencyPreference,
                     DateOpened = new DateTime(2022, 1, 1, 10, 0, 0),
                     DateClosed = (DateTime?)null,
                     InsuranceState = true,
@@ -340,8 +338,6 @@ INSERT INTO finance.transactions (
                 {
                     PolicyHolderId = newAccountId,
                     InsuranceType = "Car",
-                    PaymentInstalmentAmount = 200.25,
-                    PaymentInstalmentUnitCurrency = currencyPreference,
                     DateOpened = new DateTime(2022, 6, 1, 10, 0, 0),
                     DateClosed = (DateTime?)null,
                     InsuranceState = true,

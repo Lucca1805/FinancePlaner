@@ -147,9 +147,9 @@ namespace FinanceLiquidityManager.Models
 
                 entity.Property(e => e.PaymentAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.PaymentInstalmentAmount).HasPrecision(13, 5);
+                /*entity.Property(e => e.PaymentInstalmentAmount).HasPrecision(13, 5);
 
-                entity.Property(e => e.PaymentInstalmentUnitCurrency).HasMaxLength(3);
+                entity.Property(e => e.PaymentInstalmentUnitCurrency).HasMaxLength(3);*/
 
                 entity.Property(e => e.PaymentUnitCurrency).HasMaxLength(3);
 

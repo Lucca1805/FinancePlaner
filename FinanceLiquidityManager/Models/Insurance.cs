@@ -13,8 +13,6 @@ namespace FinanceLiquidityManager.Models
         public int InsuranceId { get; set; }
         public string PolicyHolderId { get; set; } = null!;
         public string InsuranceType { get; set; } = null!;
-        public decimal PaymentInstalmentAmount { get; set; }
-        public string? PaymentInstalmentUnitCurrency { get; set; }
         public DateTime DateOpened { get; set; }
         public DateTime? DateClosed { get; set; }
         public bool InsuranceState { get; set; }
