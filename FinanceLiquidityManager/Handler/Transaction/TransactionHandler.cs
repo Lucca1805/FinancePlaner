@@ -36,7 +36,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
             connectionString = $"server={host};userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        public async Task<ActionResult> GetAllTransactions(string userId, TransactionModelRequest request)
+        public async Task<ActionResult> GetAllTransactions(string userId, TransactionModelRequest request, string Currency)
         {
             if (string.IsNullOrEmpty(userId))
             {
@@ -93,7 +93,14 @@ namespace FinanceLiquidityManager.Handler.Transaction
                     request.Accounts,
                     accountIds,
                 });
-
+                foreach(TransactionResponse res in transactions)
+                {
+                    if(res.AmountCurrency != Currency)
+                    {
+                        res.Amount = CurrencyConverter.Convert(Currency,res.AmountCurrency,res.Amount);
+                        res.AmountCurrency = Currency;
+                    }
+                }
 
                 return Ok(transactions);
             }

@@ -31,7 +31,8 @@ namespace LoginController.Controllers
         public async Task<ActionResult> GetAllTransactions(TransactionModelRequest request)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _transaction.GetAllTransactions(userId, request);
+            var Currency = User.FindFirstValue("CurrencyPreference");
+            return await _transaction.GetAllTransactions(userId, request,Currency);
         }
 
         [HttpPost("user/transactions/assetChart")]
