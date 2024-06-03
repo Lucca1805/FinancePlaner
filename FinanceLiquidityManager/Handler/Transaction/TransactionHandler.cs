@@ -301,8 +301,8 @@ namespace FinanceLiquidityManager.Handler.Transaction
         public DateTime? dateFrom { get; set; }
         public DateTime? dateTo { get; set; }
         //public Transactiontype? type { get; set; }
-        [TransactionTypeValidation(ErrorMessage = "Transaction type must be either 'Revenue' or 'Expense'.")]
-        public string type { get; set; }
+        //[TransactionTypeValidation(ErrorMessage = "Transaction type must be either 'Revenue' or 'Expense'.")]
+        //public string type { get; set; }
     }
 
     public class TransactionexpenseRevenueChartResponseModel
@@ -345,12 +345,12 @@ namespace FinanceLiquidityManager.Handler.Transaction
         public string AccountId { get; set; } = null!;
     }
 
-    public enum Transactiontype
+    /*public enum Transactiontype
     {
         Revenue, Expense
-    }
+    }*/
 
-    public class TransactionTypeValidationAttribute : ValidationAttribute
+    /*public class TransactionTypeValidationAttribute : ValidationAttribute
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
@@ -363,5 +363,5 @@ namespace FinanceLiquidityManager.Handler.Transaction
 
             return new ValidationResult(ErrorMessage);
         }
-    }
+    }*/
 }

@@ -11,6 +11,7 @@ using System.Data;
 using System.Threading.Tasks;
 using Dapper;
 using FinanceLiquidityManager.Handler.Person;
+using Microsoft.AspNetCore.Authorization;
 using FinanceLiquidityManager.Handler.Transaction;
 
 namespace LoginController.Controllers
@@ -34,6 +35,7 @@ namespace LoginController.Controllers
         }
 
         [HttpPost("CreateDummyData")]
+        [Authorize]
         public async Task<IActionResult> DummyData()
         {
             var userId = User.FindFirstValue("UserId");
