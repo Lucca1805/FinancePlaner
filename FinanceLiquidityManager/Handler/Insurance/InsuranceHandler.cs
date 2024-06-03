@@ -152,7 +152,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
 
 
-        public async Task<ActionResult> GetOneInsurance(string userId, int insuranceId)
+        public async Task<ActionResult> GetOneInsurance(string userId, int insuranceId, string currency)
         {
             try
             {
@@ -183,7 +183,16 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     string insuranceQuery = @"SELECT * FROM finance.insurance WHERE InsuranceId = @InsuranceId";
                     var insurance = await connection.QueryAsync<InsuranceModel>(insuranceQuery, new { PolicyHolderId = accountIds, insuranceId });
 
-
+                    foreach(InsuranceModel ins in insurance)
+                    {
+                        if(ins.PaymentUnitCurrency != currency)
+                        {
+                            ins.PaymentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentUnitCurrency,(double)ins.PaymentAmount);
+                            ins.PaymentUnitCurrency = currency;
+                            ins.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentInstalmentUnitCurrency,(double)ins.PaymentInstalmentAmount); 
+                            ins.PaymentInstalmentUnitCurrency = currency;
+                        }
+                    }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
                     return Ok(insurance);
                 }
@@ -195,7 +204,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             }
         }
 
-        public async Task<ActionResult<IEnumerable<InsuranceResponse>>> GetAllInsuranceForUser(string userId)
+        public async Task<ActionResult<IEnumerable<InsuranceResponse>>> GetAllInsuranceForUser(string userId, string currency)
         {
             try
             {
@@ -249,6 +258,12 @@ namespace FinanceLiquidityManager.Handler.Insurance
                             nextPaymentDate = new DateTime(today.Year + 1, 1, 1);
                         }
                         insurance.nextPayment = nextPaymentDate;
+                        if(insurance.PaymentUnitCurrency != currency){
+                            insurance.PaymentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)insurance.PaymentAmount);
+                            insurance.PaymentUnitCurrency = currency;
+                            insurance.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)insurance.PaymentInstalmentAmount); 
+                            insurance.PaymentInstalmentUnitCurrency = currency;
+                        }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
                     return Ok(allStandingOrders);
@@ -426,7 +441,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     string insuranceaccountQuery = @"SELECT InsuranceType as type, PaymentInstalmentAmount as Cost, PaymentInstalmentUnitCurrency as Currency, Frequency as intervall  FROM finance.insurance WHERE PolicyHolderId = @AccountId";
                     var insuranceContent = (await connection.QueryAsync<InsuranceQueryModel>(insuranceaccountQuery, new { AccountId = accountId })).ToList();
 
-                    foreach (var content in insuranceContent)
+                    foreach (InsuranceQueryModel content in insuranceContent)
                     {
                         if (currency != content.Currency)
                         {
@@ -506,7 +521,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             }
         }
 
-        public async Task<ActionResult> GetIntervallChart(string userId)
+        public async Task<ActionResult> GetIntervallChart(string userId, string currency)
         {
             try
             {
@@ -536,7 +551,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     decimal quarterCost = 0;
                     decimal yearlyCost = 0;
                     decimal NextMonthCosts = 0;
-                    foreach (var insurance in insurances)
+                    foreach (InsuranceResponse insurance in insurances)
                     {
                         // Calculate the interval payments
                         var totalMonths = (insurance.DateClosed.HasValue ?
@@ -552,7 +567,13 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         var costsNextMonth = insurance.InsuranceState && (insurance.DateClosed == null || insurance.DateClosed > DateTime.Now)
                             ? (decimal)insurance.PaymentInstalmentAmount
                             : 0;
-
+                        if(insurance.PaymentUnitCurrency != currency)
+                        {
+                            monthlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)monthlyCost);
+                            quarterCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)quarterCost);
+                            yearlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)yearlyCost);
+                            NextMonthCosts = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)NextMonthCosts);
+                        }
                         monthlyCost += monthlyCost + monthlyPayment;
                         quarterCost += quarterCost + quarterPayment;
                         yearlyCost += yearlyCost + yearlyPayment;
@@ -662,11 +683,11 @@ public class CurrencyConverter
 
     public static double Convert(string newCurrency, string oldCurrency, double Value)
     {
-        if (newCurrency == "€" && oldCurrency == "USD")
+        if (newCurrency == "EUR" && oldCurrency == "USD")
         {
             return ConvertUsdToEur(Value);
         }
-        else if (newCurrency == "USD" && oldCurrency == "€")
+        else if (newCurrency == "USD" && oldCurrency == "EUR")
         {
             return ConvertEurToUsd(Value);
         }

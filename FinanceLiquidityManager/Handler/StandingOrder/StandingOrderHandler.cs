@@ -41,7 +41,7 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
         }
 
 
-        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUser(string userId)
+        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUser(string userId, string currency)
         {
             try
             {
@@ -76,7 +76,7 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                         allStandingOrders.AddRange(standingOrders);
                     }
                     List<StandingOrderResponse> response = new List<StandingOrderResponse>();
-                    foreach (var order in allStandingOrders)
+                    foreach (StandingOrder order in allStandingOrders)
                     {
                         DateTime today = DateTime.Today;
                         DateTime nextPaymentDate = today;
@@ -109,6 +109,11 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                                 nextPaymentDate = new DateTime(nextPaymentDate.Year, nextPaymentDate.Month, 1);
                             }
                         }
+                        if (order.PaymentCurrency != currency)
+                        {
+                            order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+                            order.PaymentCurrency = currency;
+                        }
                         StandingOrderResponse StandingOrderRes = new StandingOrderResponse
                         {
                             OrderId = order.OrderId,
@@ -138,7 +143,7 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
             }
         }
 
-        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUserByTime(string userId, DateTime dateTime)
+        public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUserByTime(string userId, DateTime dateTime, string currency)
         {
             try
             {
@@ -205,6 +210,11 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                                 nextPaymentDate = today.AddMonths(1);
                                 nextPaymentDate = new DateTime(nextPaymentDate.Year, nextPaymentDate.Month, 1);
                             }
+                        }
+                        if (order.PaymentCurrency != currency)
+                        {
+                            order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+                            order.PaymentCurrency = currency;
                         }
                         StandingOrderResponse StandingOrderRes = new StandingOrderResponse
                         {

@@ -38,7 +38,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<LoanModel>> GetOneCredit(int loanId)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _credit.GetOneCredit(userId, loanId);
+            var CurrencyPreference = User.FindFirstValue("CurrencyPreference");
+            return await _credit.GetOneCredit(userId, loanId,CurrencyPreference);
         }
 
         [HttpPost("user/credit")]
@@ -71,7 +72,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoans()
         {
             var userId = User.FindFirstValue("UserId");
-            var loans = await _credit.GetAllLoansForUser(userId);
+            var CurrencyPreference = User.FindFirstValue("CurrencyPreference");
+            var loans = await _credit.GetAllLoansForUser(userId,CurrencyPreference);
 
             /*var files;
             foreach(var loan in loans){
@@ -86,7 +88,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansBetween(DateTime startDate, DateTime endDate)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _credit.GetAllLoansForUserBetween(userId,startDate,endDate);
+            var CurrencyPreference = User.FindFirstValue("CurrencyPreference");
+            return await _credit.GetAllLoansForUserBetween(userId,startDate,endDate,CurrencyPreference);
         }
 
         

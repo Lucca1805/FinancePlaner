@@ -41,7 +41,9 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult> GetOneInsurance(int insuranceId)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _insurance.GetOneInsurance(userId, insuranceId);
+
+            var currency = User.FindFirstValue("CurrencyPreference");
+            return await _insurance.GetOneInsurance(userId, insuranceId,currency);
         }
 
         [HttpGet("user/insurances")]
@@ -49,7 +51,9 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<InsuranceResponse>>> GetAllInsuranceForUser()
         {
             var userId = User.FindFirstValue("UserId");
-            return await _insurance.GetAllInsuranceForUser(userId);
+
+            var currency = User.FindFirstValue("CurrencyPreference");
+            return await _insurance.GetAllInsuranceForUser(userId,currency);
         }
 
         [HttpDelete("user/insurance/{insuranceId}")]
@@ -82,7 +86,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult> GetIntervallChart()
         {
             var userId = User.FindFirstValue("UserId");
-            return await _insurance.GetIntervallChart(userId);
+            var currency = User.FindFirstValue("CurrencyPreference");
+            return await _insurance.GetIntervallChart(userId,currency);
         }
 
     }

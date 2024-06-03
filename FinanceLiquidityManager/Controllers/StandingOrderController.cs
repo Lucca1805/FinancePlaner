@@ -37,7 +37,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingOrders()
         {
             var userId = User.FindFirstValue("UserId");
-            return await _standingOrder.GetAllStandingordersForUser(userId);
+            var Currency = User.FindFirstValue("CurrencyPreference");
+            return await _standingOrder.GetAllStandingordersForUser(userId,Currency);
         }
 
         [HttpGet("user/standingOrdersByTime")]
@@ -45,7 +46,8 @@ namespace FinanceLiquidityManager.Controllers
         public async Task<ActionResult<IEnumerable<StandingOrderResponse>>> GetAllStandingordersForUserByTime([FromQuery] DateTime dateTime)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _standingOrder.GetAllStandingordersForUserByTime(userId,dateTime);
+            var Currency = User.FindFirstValue("CurrencyPreference");
+            return await _standingOrder.GetAllStandingordersForUserByTime(userId,dateTime,Currency);
         }
     }
 

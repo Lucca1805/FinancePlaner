@@ -41,9 +41,9 @@ namespace FinanceLiquidityManager.Handler.Credit
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        
 
-        public async Task<ActionResult> GetOneCredit(string userId, int loanId)
+
+        public async Task<ActionResult> GetOneCredit(string userId, int loanId, string CurrencyPreference)
         {
             try
             {
@@ -72,11 +72,18 @@ namespace FinanceLiquidityManager.Handler.Credit
 
                     _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountIds);
                     string loanQuery = @"SELECT l.*, f.FileInfo, f.FileType FROM finance.loan l LEFT JOIN finance.files f ON f.RefID = l.LoanId WHERE l.LoanId = @LoanId;";
-                    var insurance = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountIds, loanId });
+                    var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountIds, loanId });
 
-
+                    foreach (LoanModel loan in loans)
+                    {
+                        if (loan.LoanUnitCurrency != CurrencyPreference)
+                        {
+                            loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            loan.LoanUnitCurrency = CurrencyPreference;
+                        }
+                    }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
-                    return Ok(insurance);
+                    return Ok(loans);
                 }
             }
             catch (Exception ex)
@@ -101,8 +108,8 @@ namespace FinanceLiquidityManager.Handler.Credit
                 string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
                 using (var connection = new MySqlConnection(connectionString))
                 {
-                    
-                        var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
+
+                    var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
                     var accountId = accountIds.FirstOrDefault();
 
                     // Check if accountId is null or empty
@@ -255,9 +262,9 @@ namespace FinanceLiquidityManager.Handler.Credit
         }
 
 
-        
 
-        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUser(string userId)
+
+        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUser(string userId, string CurrencyPreference)
         {
             try
             {
@@ -291,7 +298,16 @@ namespace FinanceLiquidityManager.Handler.Credit
                         var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountId });
                         allLoans.AddRange(loans);
                     }
-
+                    foreach (LoanModel loan in allLoans)
+                    {
+                        if (loan.LoanUnitCurrency != CurrencyPreference)
+                        {
+                            _logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);
+                            loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            _logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);
+                            //loan.LoanUnitCurrency = CurrencyPreference;
+                        }
+                    }
                     _logger.LogInformation("All loans successfully retrieved.");
                     return Ok(allLoans);
                 }
@@ -303,7 +319,7 @@ namespace FinanceLiquidityManager.Handler.Credit
             }
         }
 
-        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUserBetween(string userId,DateTime startDate, DateTime endDate)
+        public async Task<ActionResult<IEnumerable<LoanModel>>> GetAllLoansForUserBetween(string userId, DateTime startDate, DateTime endDate, string CurrencyPreference)
         {
             try
             {
@@ -334,10 +350,17 @@ namespace FinanceLiquidityManager.Handler.Credit
                     {
                         _logger.LogInformation("Fetching loans for AccountId: {accountId}", accountId);
                         string loanQuery = @"SELECT * FROM finance.loan WHERE CreditorAccountId = @CreditorAccountId AND StartDate >= @startDate And EndDate <= @endDate";
-                        var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountId,startDate = startDate,endDate= endDate });
+                        var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountId, startDate = startDate, endDate = endDate });
                         allLoans.AddRange(loans);
                     }
-
+                    foreach (LoanModel loan in allLoans)
+                    {
+                        if (loan.LoanUnitCurrency != CurrencyPreference)
+                        {
+                            loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            loan.LoanUnitCurrency = CurrencyPreference;
+                        }
+                    }
                     _logger.LogInformation("All loans successfully retrieved.");
                     return Ok(allLoans);
                 }
@@ -491,9 +514,9 @@ namespace FinanceLiquidityManager.Handler.Credit
         public string? InterestRateUnitCurrency { get; set; }
         public string? LoanUnitCurrency { get; set; }
 
-        public string? loanName {get; set;}
-        public int loanTerm {get; set;}
-        public decimal? additionalCosts {get; set;}
+        public string? loanName { get; set; }
+        public int loanTerm { get; set; }
+        public decimal? additionalCosts { get; set; }
 
     }
     public class LoanModel
@@ -509,11 +532,11 @@ namespace FinanceLiquidityManager.Handler.Credit
         public string? InterestRateUnitCurrency { get; set; }
         public string? LoanUnitCurrency { get; set; }
 
-        public string? loanName {get; set;}
-        public int loanTerm {get; set;}
-        public decimal? additionalCosts {get; set;}
-        public string? FileInfo {get; set;}
-        public string? FileType {get; set;}
+        public string? loanName { get; set; }
+        public int loanTerm { get; set; }
+        public decimal? additionalCosts { get; set; }
+        public string? FileInfo { get; set; }
+        public string? FileType { get; set; }
 
     }
 
@@ -529,10 +552,10 @@ namespace FinanceLiquidityManager.Handler.Credit
         public string? LoanStatus { get; set; }
         public string? InterestRateUnitCurrency { get; set; }
         public string? LoanUnitCurrency { get; set; }
-        public string? loanName {get; set;}
-        public int loanTerm {get; set;}
-        public decimal? additionalCosts {get; set;}
-        public decimal? effectiveInterestRate {get; set;}
+        public string? loanName { get; set; }
+        public int loanTerm { get; set; }
+        public decimal? additionalCosts { get; set; }
+        public decimal? effectiveInterestRate { get; set; }
 
     }
 
@@ -564,5 +587,37 @@ namespace FinanceLiquidityManager.Handler.Credit
     public class AccountModel
     {
         public string AccountId { get; set; }
+    }
+    public class CurrencyConverter
+    {
+        // Assume exchange rate from USD to EUR
+        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
+
+        public static double Convert(string newCurrency, string oldCurrency, double Value)
+        {
+            if (newCurrency == "EUR" && oldCurrency == "USD")
+            {
+                return ConvertUsdToEur(Value);
+            }
+            else if (newCurrency == "USD" && oldCurrency == "EUR")
+            {
+                return ConvertEurToUsd(Value);
+            }
+            else
+            {
+                return (Value);
+            }
+        }
+        // Convert USD to EUR
+        public static double ConvertUsdToEur(double amountInUsd)
+        {
+            return amountInUsd * UsdToEurExchangeRate;
+        }
+
+        // Convert EUR to USD
+        public static double ConvertEurToUsd(double amountInEur)
+        {
+            return amountInEur / UsdToEurExchangeRate;
+        }
     }
 }
