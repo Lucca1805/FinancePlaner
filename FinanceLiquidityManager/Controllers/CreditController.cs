@@ -59,7 +59,7 @@ namespace FinanceLiquidityManager.Controllers
 
         [HttpPut("user/credit/{loanId}")]
         [Authorize]
-        public async Task<ActionResult> UpdateOneCredit(int loanId, [FromBody] LoanModel updatedLoan)
+        public async Task<ActionResult> UpdateOneCredit(int loanId, [FromBody] LoanPutModel updatedLoan)
         {
             var userId = User.FindFirstValue("UserId");
             return await _credit.UpdateOneCredit(userId,loanId, updatedLoan);

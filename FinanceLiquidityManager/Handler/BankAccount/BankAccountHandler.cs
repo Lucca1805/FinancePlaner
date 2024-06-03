@@ -64,14 +64,49 @@ namespace FinanceLiquidityManager.Handler.BankAccount
                     var deleted = 0;
                     foreach (var accountId in accountIds)
                     {
+                        _logger.LogInformation("Fetching Insurances for AccountId: {accountId}", accountId);
+                        string insuranceQuery = @"Delete From finance.insurance WHERE PolicyHolderId = @AccountId";
+                        var affectedInsuranceRows = await connection.ExecuteAsync(insuranceQuery, new { AccountId = accountId });
+                        if (affectedInsuranceRows > 0)
+                        {
+                            deleted++;
+                        }
                         _logger.LogInformation("Fetching loans for AccountId: {accountId}", accountId);
-                        string bankAccountQuery = @"DELETE FROM finance.bank_account WHERE AccountId = @AccountId";
-                        var affectedRows = await connection.ExecuteAsync(bankAccountQuery, new { AccountId = accountId });
+                        string loanQuery = @"DELETE FROM finance.loan WHERE CreditorAccountId = @AccountId";
+                        var affectedLoanRows = await connection.ExecuteAsync(loanQuery, new { AccountId = accountId });
+                        if (affectedLoanRows > 0)
+                        {
+                            deleted++;
+                        }
+                        _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountId);
+                        string standingOrderQuery = @"DELETE FROM finance.standingOrders WHERE CreditorAccountId = @AccountId";
+                        var affectedOrderRows = await connection.ExecuteAsync(standingOrderQuery, new { AccountId = accountId });
+                        if (affectedOrderRows > 0)
+                        {
+                            deleted++;
+                        }
+                        _logger.LogInformation("Fetching Transactions for AccountId: {accountId}", accountId);
+                        string TransactionQuery = @"Delete FROM finance.transactions WHERE AccountId = @accountId";
+                        var affectedTransactionRows = await connection.ExecuteAsync(TransactionQuery, new { accountId = accountId });
+                        if (affectedTransactionRows > 0)
+                        {
+                            deleted++;
+                        }
+                        _logger.LogInformation("Fetching accounts for AccountId: {accountId}", accountId);
+                        string bankQuery = @"DELETE FROM finance.accounts WHERE AccountId = @accountId";
+                        var affectedbankRows = await connection.ExecuteAsync(bankQuery, new { accountId = accountId });
+                        if (affectedbankRows > 0)
+                        {
+                            deleted++;
+                        }
+                        _logger.LogInformation("Fetching bankAccounts for AccountId: {accountId}", accountId);
+                        string bankAccountQuery = @"DELETE FROM finance.bank_account WHERE accountId = @AccountId";
+                        var affectedRows = await connection.ExecuteAsync(bankAccountQuery, new { accountId = accountId });
                         if (affectedRows > 0)
                         {
                             deleted++;
                         }
-
+                        
                     }
                     if (deleted > 0)
                     {

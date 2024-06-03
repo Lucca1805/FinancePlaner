@@ -349,7 +349,7 @@ namespace FinanceLiquidityManager.Handler.Credit
             }
         }
 
-        public async Task<ActionResult> UpdateOneCredit(string userId, int loanId, [FromBody] LoanModel updatedLoan)
+        public async Task<ActionResult> UpdateOneCredit(string userId, int loanId, [FromBody] LoanPutModel updatedLoan)
         {
             if (string.IsNullOrEmpty(userId))
             {
@@ -478,7 +478,24 @@ namespace FinanceLiquidityManager.Handler.Credit
         }
 
     }
+    public class LoanPutModel
+    {
+        public int LoanId { get; set; }
+        public string CreditorAccountId { get; set; }
+        public decimal LoanAmount { get; set; }
+        public decimal InterestRate { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? Frequency { get; set; }
+        public string? LoanStatus { get; set; }
+        public string? InterestRateUnitCurrency { get; set; }
+        public string? LoanUnitCurrency { get; set; }
 
+        public string? loanName {get; set;}
+        public int loanTerm {get; set;}
+        public decimal? additionalCosts {get; set;}
+
+    }
     public class LoanModel
     {
         public int LoanId { get; set; }
