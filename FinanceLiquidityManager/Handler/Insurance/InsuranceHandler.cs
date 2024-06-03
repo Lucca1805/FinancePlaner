@@ -83,8 +83,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 INSERT INTO finance.insurance (
                     PolicyHolderId, 
                     InsuranceType, 
-                    PaymentInstalmentAmount, 
-                    PaymentInstalmentUnitCurrency, 
                     DateOpened, 
                     DateClosed, 
                     PaymentAmount, 
@@ -98,8 +96,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 ) VALUES (
                     @PolicyHolderId, 
                     @InsuranceType, 
-                    @PaymentInstalmentAmount, 
-                    @PaymentInstalmentUnitCurrency, 
                     @DateOpened, 
                     @DateClosed, 
                     @PaymentAmount, 
@@ -117,8 +113,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     {
                         PolicyHolderId = newInsurance.PolicyHolderId,
                         InsuranceType = newInsurance.InsuranceType,
-                        PaymentInstalmentAmount = newInsurance.PaymentInstalmentAmount,
-                        PaymentInstalmentUnitCurrency = newInsurance.PaymentInstalmentUnitCurrency,
                         DateOpened = newInsurance.DateOpened,
                         DateClosed = newInsurance.DateClosed,
                         PaymentAmount = newInsurance.PaymentAmount,
@@ -189,8 +183,8 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         {
                             ins.PaymentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentUnitCurrency,(double)ins.PaymentAmount);
                             ins.PaymentUnitCurrency = currency;
-                            ins.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentInstalmentUnitCurrency,(double)ins.PaymentInstalmentAmount); 
-                            ins.PaymentInstalmentUnitCurrency = currency;
+                            /*ins.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentInstalmentUnitCurrency,(double)ins.PaymentInstalmentAmount); 
+                            ins.PaymentInstalmentUnitCurrency = currency;*/
                         }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
@@ -261,8 +255,8 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         if(insurance.PaymentUnitCurrency != currency){
                             insurance.PaymentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)insurance.PaymentAmount);
                             insurance.PaymentUnitCurrency = currency;
-                            insurance.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)insurance.PaymentInstalmentAmount); 
-                            insurance.PaymentInstalmentUnitCurrency = currency;
+                            /*insurance.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)insurance.PaymentInstalmentAmount); 
+                            insurance.PaymentInstalmentUnitCurrency = currency;*/
                         }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
@@ -382,8 +376,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 SET 
                     PolicyHolderId = @PolicyHolderId, 
                     InsuranceType = @InsuranceType, 
-                    PaymentInstalmentAmount = @PaymentInstalmentAmount, 
-                    PaymentInstalmentUnitCurrency = @PaymentInstalmentUnitCurrency, 
                     DateOpened = @DateOpened, 
                     DateClosed = @DateClosed,
                     InsuranceState = @InsuranceState, 
@@ -438,7 +430,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 foreach (var accountId in accountIds)
                 {
                     _logger.LogInformation("Fetching Insurances for AccountId: {accountId}", accountId);
-                    string insuranceaccountQuery = @"SELECT InsuranceType as type, PaymentInstalmentAmount as Cost, PaymentInstalmentUnitCurrency as Currency, Frequency as intervall  FROM finance.insurance WHERE PolicyHolderId = @AccountId";
+                    string insuranceaccountQuery = @"SELECT InsuranceType as type, PaymentAmount as Cost, PaymentUnitCurrency as Currency, Frequency as intervall  FROM finance.insurance WHERE PolicyHolderId = @AccountId";
                     var insuranceContent = (await connection.QueryAsync<InsuranceQueryModel>(insuranceaccountQuery, new { AccountId = accountId })).ToList();
 
                     foreach (InsuranceQueryModel content in insuranceContent)
@@ -559,20 +551,20 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                             (DateTime.Now - insurance.DateOpened).TotalDays) / 30;
                         if (totalMonths == 0) totalMonths = 1; // To avoid division by zero
 
-                        var monthlyPayment = Math.Round(insurance.PaymentInstalmentAmount / (decimal)totalMonths, 2);
+                        var monthlyPayment = Math.Round(insurance.PaymentAmount / (decimal)totalMonths, 2);
                         var quarterPayment = Math.Round(monthlyPayment * 3, 2);
                         var yearlyPayment = Math.Round(monthlyPayment * 12, 2);
 
                         // Determine costs for the next month
                         var costsNextMonth = insurance.InsuranceState && (insurance.DateClosed == null || insurance.DateClosed > DateTime.Now)
-                            ? (decimal)insurance.PaymentInstalmentAmount
+                            ? (decimal)insurance.PaymentAmount
                             : 0;
                         if(insurance.PaymentUnitCurrency != currency)
                         {
-                            monthlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)monthlyCost);
-                            quarterCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)quarterCost);
-                            yearlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)yearlyCost);
-                            NextMonthCosts = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)NextMonthCosts);
+                            monthlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)monthlyCost);
+                            quarterCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)quarterCost);
+                            yearlyCost = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)yearlyCost);
+                            NextMonthCosts = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentUnitCurrency,(double)NextMonthCosts);
                         }
                         monthlyCost += monthlyCost + monthlyPayment;
                         quarterCost += quarterCost + quarterPayment;
@@ -605,8 +597,6 @@ public class InsuranceModel
     public int InsuranceId { get; set; }
     public string PolicyHolderId { get; set; }
     public string InsuranceType { get; set; }
-    public decimal PaymentInstalmentAmount { get; set; }
-    public string PaymentInstalmentUnitCurrency { get; set; }
     public DateTime DateOpened { get; set; }
     public DateTime? DateClosed { get; set; }
     public bool InsuranceState { get; set; }
@@ -623,8 +613,6 @@ public class InsuranceResponse
     public int InsuranceId { get; set; }
     public string PolicyHolderId { get; set; }
     public string InsuranceType { get; set; }
-    public decimal PaymentInstalmentAmount { get; set; }
-    public string PaymentInstalmentUnitCurrency { get; set; }
     public DateTime DateOpened { get; set; }
     public DateTime? DateClosed { get; set; }
     public bool InsuranceState { get; set; }
@@ -642,8 +630,6 @@ public class InsuranceModelRequest
 {
     public string PolicyHolderId { get; set; }
     public string InsuranceType { get; set; }
-    public decimal PaymentInstalmentAmount { get; set; }
-    public string PaymentInstalmentUnitCurrency { get; set; }
     public DateTime DateOpened { get; set; }
     public DateTime? DateClosed { get; set; }
     public bool InsuranceState { get; set; }
