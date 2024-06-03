@@ -114,14 +114,15 @@ namespace FinanceLiquidityManager.Handler.Login
             using (var connection = new MySqlConnection(connectionString))
             {
                 connection.Open();
-                var query = @"INSERT INTO person (UserName, Email, Password) VALUES (@UserName, @Email, @Password);
+                var query = @"INSERT INTO person (UserName, Email, Password, CurrencyPreference) VALUES (@UserName, @Email, @Password, @CurrencyPreference);
                           SELECT LAST_INSERT_ID();";
                 var hashedPassword = HashPassword(request.Password); // Implement this method based on your security requirements
                 var userId = await connection.QuerySingleAsync<int>(query, new
                 {
                     UserName = request.UserName,
                     Email = request.Email,
-                    Password = hashedPassword
+                    Password = hashedPassword,
+                    CurrencyPreference = request.CurrencyPreference
                 });
 
                 if (userId > 0)

@@ -33,7 +33,13 @@ namespace LoginController.Controllers
             return await _person.Update(request);
         }
 
-        
+        [HttpPost("CreateDummyData")]
+        public async Task<IActionResult> DummyData()
+        {
+            var userId = User.FindFirstValue("UserId");
+            var CurrencyPreference = User.FindFirstValue("CurrencyPreference");
+            return await _person.DummyData(userId,CurrencyPreference);
+        }
 
 
     }
