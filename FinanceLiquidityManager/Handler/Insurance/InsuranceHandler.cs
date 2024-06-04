@@ -89,7 +89,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     PaymentUnitCurrency, 
                     Description, 
                     Frequency,
-                    Polizze,
                     InsuranceState,
                     InsuranceCompany,
                     Country
@@ -102,7 +101,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     @PaymentUnitCurrency, 
                     @Description, 
                     @Frequency,
-                    @Polizze,
                     @InsuranceState,
                     @InsuranceCompany,
                     @Country
@@ -119,7 +117,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         PaymentUnitCurrency = newInsurance.PaymentUnitCurrency,
                         Description = newInsurance.Description,
                         Frequency = newInsurance.Frequency,
-                        Polizze = polizzeBytes,
                         InsuranceState = newInsurance.InsuranceState,
                         InsuranceCompany = newInsurance.InsuranceCompany,
                         Country = newInsurance.Country
@@ -381,7 +378,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     InsuranceState = @InsuranceState, 
                     PaymentAmount = @PaymentAmount, 
                     PaymentUnitCurrency = @PaymentUnitCurrency, 
-                    Polizze = @Polizze, 
                     InsuranceCompany = @InsuranceCompany, 
                     Description = @Description, 
                     Country = @Country,
@@ -602,11 +598,11 @@ public class InsuranceModel
     public bool InsuranceState { get; set; }
     public decimal PaymentAmount { get; set; }
     public string PaymentUnitCurrency { get; set; }
-    public byte[]? Polizze { get; set; }
     public string InsuranceCompany { get; set; }
     public string Description { get; set; }
     public string Country { get; set; }
     public string Frequency { get; set; }
+    public string AdditionalInformation { get; set; }
 }
 public class InsuranceResponse
 {
@@ -618,11 +614,11 @@ public class InsuranceResponse
     public bool InsuranceState { get; set; }
     public decimal PaymentAmount { get; set; }
     public string PaymentUnitCurrency { get; set; }
-    public byte[]? Polizze { get; set; }
     public string InsuranceCompany { get; set; }
     public string Description { get; set; }
     public string Country { get; set; }
     public string Frequency { get; set; }
+    public string AdditionalInformation { get; set; }
     public DateTime nextPayment { get; set; }
     
 }
@@ -634,12 +630,12 @@ public class InsuranceModelRequest
     public DateTime? DateClosed { get; set; }
     public bool InsuranceState { get; set; }
     public decimal PaymentAmount { get; set; }
-    public byte[] Polizze { get; set; } = null!;
     public string PaymentUnitCurrency { get; set; }
     public string InsuranceCompany { get; set; }
     public string Description { get; set; }
     public string Country { get; set; }
     public string Frequency { get; set; }
+    public string AdditionalInformation { get; set; }
 }
 public class InsuranceHistoryChartRespone
 {

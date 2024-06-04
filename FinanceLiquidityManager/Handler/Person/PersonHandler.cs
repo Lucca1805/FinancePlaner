@@ -127,9 +127,9 @@ namespace FinanceLiquidityManager.Handler.Person
 
                 string insertInsuranceQuery = @"
                     INSERT INTO finance.insurance 
-                    (PolicyHolderId, InsuranceType, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country, Frequency) 
+                    (PolicyHolderId, InsuranceType, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency,  InsuranceCompany, Description, Country, Frequency) 
                     VALUES
-                    (@PolicyHolderId, @InsuranceType, @DateOpened, @DateClosed, @InsuranceState, @PaymentAmount, @PaymentUnitCurrency, @Polizze, @InsuranceCompany, @Description, @Country, @Frequency)";
+                    (@PolicyHolderId, @InsuranceType, @DateOpened, @DateClosed, @InsuranceState, @PaymentAmount, @PaymentUnitCurrency,  @InsuranceCompany, @Description, @Country, @Frequency)";
 
                 var insuranceParameters1 = new
                 {
@@ -140,7 +140,6 @@ namespace FinanceLiquidityManager.Handler.Person
                     InsuranceState = true,
                     PaymentAmount = 1500.00,
                     PaymentUnitCurrency = currencyPreference,
-                    Polizze = "binary Data",
                     InsuranceCompany = "Allianz",
                     Description = "Health Insurance",
                     Country = "USA",
@@ -343,7 +342,6 @@ INSERT INTO finance.transactions (
                     InsuranceState = true,
                     PaymentAmount = 2000.00,
                     PaymentUnitCurrency = currencyPreference,
-                    Polizze = "binary Data",
                     InsuranceCompany = "Progressive",
                     Description = "Car Insurance",
                     Country = "USA",
