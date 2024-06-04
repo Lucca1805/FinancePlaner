@@ -18,7 +18,6 @@ namespace FinanceLiquidityManager.Models
         public bool InsuranceState { get; set; }
         public decimal PaymentAmount { get; set; }
         public string? PaymentUnitCurrency { get; set; }
-        public byte[] Polizze { get; set; } = null!;
         public string InsuranceCompany { get; set; } = null!;
         public string? Description { get; set; }
         public string Country { get; set; } = null!;

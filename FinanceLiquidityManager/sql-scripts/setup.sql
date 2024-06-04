@@ -58,11 +58,12 @@ CREATE TABLE finance.insurance (
     InsuranceState boolean  NOT NULL,
     PaymentAmount DECIMAL(13, 5) NOT NULL,
     PaymentUnitCurrency VARCHAR(3),  
-    Polizze longblob  NOT NULL,
+--    Polizze longblob  NOT NULL,
     InsuranceCompany varchar(20)  NOT NULL,
     Description varchar(20),
     Country varchar(10)  NOT NULL,
     Frequency VARCHAR(35) NOT NULL COMMENT 'Zahlungsinterval',
+    AdditionalInformation VARCHAR(100),
  --   CONSTRAINT CHK_PaymentInstalmentUnitCurrency CHECK (PaymentInstalmentUnitCurrency IN ('USD', 'EUR', 'EUR')),
     CONSTRAINT CHK_PaymentUnitCurrency CHECK (PaymentUnitCurrency IN ('USD', 'EUR', 'EUR')),
     FOREIGN KEY (PolicyHolderId) REFERENCES accounts(AccountId)
@@ -169,15 +170,15 @@ CREATE TABLE finance.transactions (
 
 INSERT INTO finance.person (Email, UserName, Password,CurrencyPreference) VALUES
 ('person1@example.com', 'user1', '$2b$12$YsyA7BgyKgzHVvxlMHSRtOxpncpzchK1EFIMZGmrrwbR0zlXcAIHu','EUR'), -- password1
-('person2@example.com', 'user2', '$2a$12$e8BJkWeGywFz0drfp5e40OYBJd2rQYrYcR5H4EX9hM5lVRfuJoWQu','EUR'), -- password2
-('person3@example.com', 'user3', '$2a$12$u6hb9A1QY.3FQOafzE8qQOQ.YMdsI/PojpfxRGIpjKoU2fU5dLRr2','EUR'), -- password3
-('person4@example.com', 'user4', '$2a$12$qE.yqWVgEOY1Shb04GdBvevN.Kedc1NftPZx6EB7nK7GiYvMz6pi2','EUR'), -- password4
-('person5@example.com', 'user5', '$2a$12$ClmTUsqIn9UovPVST3H6BuoM8XrCxXnbV5F2zWnAfk8RxY5QUmuKO','EUR'), -- password5
-('person6@example.com', 'user6', '$2a$12$M/fEgSHJERjI.RHDJ4Kye.KJGQ0soF4wsJStN10KnE63yQIqZflue','USD'), -- password6
-('person7@example.com', 'user7', '$2a$12$4.A0ZDi1TPlA6sF1YRXMpeHk26uPQhbP4Q5icZjApyyC3Te.1mY8G','USD'), -- password7
-('person8@example.com', 'user8', '$2a$12$EDqNqggz3J7.1HUzwQspXeNYN6dB80pYI9A5hO1.yG2fw.bmE1xDi','USD'), -- password8
-('person9@example.com', 'user9', '$2a$12$k/qL8MtI4J44ctY0MQUCTu0iJf9VgXTRIbmM60r8oiyPx8XtKROD2','USD'), -- password9
-('person10@example.com', 'user10', '$2a$12$R5T4N44cBh9NN6CmR5Ub6OC98Jfkgk1zK4hPiLRpVXfaVbCZlmybO','USD'); -- password10
+('person2@example.com', 'user2', '$2a$12$DfrZ5NAdoVq1LSN8zNYAfOdD.Sj2qaVaCvQsUGLIWLCvYZbgKJlje','EUR'), -- password2
+('person3@example.com', 'user3', '$2a$12$fZaCQxGiN2qFYDUA1pCzouAP2hYaSFB6XCVPYjMeQud3bhix0Sd/e','EUR'), -- password3
+('person4@example.com', 'user4', '$2a$12$gDtvjf0dGhfY4NldonZ2Z.sGnfp/8iPiid4y5mpMyhEZC/R9WAfDW','EUR'), -- password4
+('person5@example.com', 'user5', '$2a$12$EDTOUwW842pB4ysS2GyE9uJPByDbl75vxqZAMpDabhw7Px9dWbXE.','EUR'), -- password5
+('person6@example.com', 'user6', '$2a$12$QluEA2rFA4VhJwqeQp0gJOOVev5gm86EAgq/0O7yAp9bAWs8.jwva','USD'), -- password6
+('person7@example.com', 'user7', '$2a$12$Ad4G.L2Ut5VIoXb8avx.GO3UuYVWqAmuPKbEL.YlbYLgbDXVhllm.','USD'), -- password7
+('person8@example.com', 'user8', '$2a$12$zFUuJsWgtu6xqdjZ/Vi8fu0v7lk9MJSOIoxAvt7OotziAPclVKXIy','USD'), -- password8
+('person9@example.com', 'user9', '$2a$12$FkF1Gh0gjguI6u5aUDb04.x1WcDevpQK8JkDjJ98PhsLGjshoZMH.','USD'), -- password9
+('person10@example.com', 'user10', '$2a$12$cFjybKaK9u/leA4qXCbfzuzq11e.0SAnAqyzrhS83Czi..PuZiiMe','USD'); -- password10
 
 -- Insert Accounts for each Person
 INSERT INTO finance.accounts (AccountId, Currency, AccountType, AccountSubType, Nickname, SchemeName, Identification, Name, SecondaryIdentification) VALUES
@@ -244,19 +245,19 @@ INSERT INTO finance.bank_account (BankId, AccountId) VALUES
 (5, 'ACC1010'); 
 
 -- Insert 3 Insurances per User
-INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, Polizze, InsuranceCompany, Description, Country, Frequency) VALUES
-('ACC1001', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
-('ACC1002', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
-('ACC1003', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
-('ACC1004', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
-('ACC1005', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
-('ACC1006', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
-('ACC1007', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
-('ACC1008', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
-('ACC1009', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
-('ACC1010', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'binary data', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
-('ACC1011', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'binary data', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
-('ACC1012', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'binary data', 'AXA', 'Life Insurance', 'Germany', 'Monthly');
+INSERT INTO finance.insurance (PolicyHolderId, InsuranceType, DateOpened, DateClosed, InsuranceState, PaymentAmount, PaymentUnitCurrency, InsuranceCompany, Description, Country, Frequency) VALUES
+('ACC1001', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1002', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1003', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1004', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1005', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1006', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1007', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1008', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1009', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'AXA', 'Life Insurance', 'Germany', 'Monthly'),
+('ACC1010', 'Health', '2022-01-01 10:00:00', NULL, TRUE, 150.50, 'USD', 'Allianz', 'Health Insurance', 'USA', 'Monthly'),
+('ACC1011', 'Car', '2022-06-01 10:00:00', NULL, TRUE, 200.25, 'USD', 'Progressive', 'Car Insurance', 'USA', 'Monthly'),
+('ACC1012', 'Life', '2022-06-15 08:30:00', '2023-06-15 08:30:00', FALSE, 250.75, 'EUR', 'AXA', 'Life Insurance', 'Germany', 'Monthly');
 
 -- Insert Loans per User (3 loans per user)
 INSERT INTO finance.loan (CreditorAccountId, LoanType, LoanAmount, LoanUnitCurrency, InterestRate, InterestRateUnitCurrency, StartDate, EndDate, LoanStatus, Frequency, loanName, loanTerm, additionalCosts, effectiveInterestRate) VALUES
