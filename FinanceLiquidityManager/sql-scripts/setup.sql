@@ -112,6 +112,7 @@ CREATE TABLE finance.files (
     FileInfo longblob  NOT NULL,
     FileType VARCHAR(1) NOT NULL,
     RefID INT NOT NULL,
+    RefTable VARCHAR(10),
     FOREIGN KEY (RefID) REFERENCES finance.loan(LoanId) on delete cascade,
     FOREIGN KEY (RefID) REFERENCES finance.insurance(InsuranceId) on delete cascade,
     CONSTRAINT CHK_FileType CHECK (FileType IN ('I', 'L'))  

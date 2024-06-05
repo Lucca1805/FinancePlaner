@@ -29,10 +29,10 @@ namespace FinanceLiquidityManager.Controllers
         }
         [HttpPost("user/insurance")]
         [Authorize]
-        public async Task<ActionResult> AddInsurance([FromBody] InsuranceModelRequest newInsurance, [FromForm] IFormFile polizze)
+        public async Task<ActionResult> AddInsurance([FromForm] InsuranceModelRequest newInsurance)
         {
             var userId = User.FindFirstValue("UserId");
-            return await _insurance.AddInsurance(userId, newInsurance, polizze);
+            return await _insurance.AddInsurance(userId, newInsurance);
         }
 
 

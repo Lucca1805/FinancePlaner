@@ -40,8 +40,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        [HttpPost]
-        public async Task<ActionResult> AddInsurance(string userId, [FromBody] InsuranceModelRequest newInsurance, [FromForm] IFormFile polizze)
+        public async Task<ActionResult> AddInsurance(string userId, [FromForm] InsuranceModelRequest newInsurance)
         {
             try
             {
@@ -67,66 +66,86 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     // Assign the accountId to the newInsurance's PolicyHolderId
                     newInsurance.PolicyHolderId = accountId;
 
-                    // Read the file data into a byte array
-                    byte[] polizzeBytes = null;
-                    if (polizze != null && polizze.Length > 0)
-                    {
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            await polizze.CopyToAsync(memoryStream);
-                            polizzeBytes = memoryStream.ToArray();
-                        }
-                    }
-
-                    // Include the file data in the insertion query
+                    // Insert the insurance record and retrieve the generated InsuranceId
                     string queryInsurance = @"
                 INSERT INTO finance.insurance (
                     PolicyHolderId, 
                     InsuranceType, 
                     DateOpened, 
                     DateClosed, 
+                    InsuranceState, 
                     PaymentAmount, 
                     PaymentUnitCurrency, 
+                    InsuranceCompany, 
                     Description, 
-                    Frequency,
-                    InsuranceState,
-                    InsuranceCompany,
+                    Frequency, 
+                    AdditionalInformation,
                     Country
                 ) VALUES (
                     @PolicyHolderId, 
                     @InsuranceType, 
                     @DateOpened, 
                     @DateClosed, 
+                    @InsuranceState, 
                     @PaymentAmount, 
                     @PaymentUnitCurrency, 
+                    @InsuranceCompany, 
                     @Description, 
-                    @Frequency,
-                    @InsuranceState,
-                    @InsuranceCompany,
+                    @Frequency, 
+                    @AdditionalInformation,
                     @Country
                 );
+                SELECT LAST_INSERT_ID();
             ";
 
                     var parameters = new
                     {
                         PolicyHolderId = newInsurance.PolicyHolderId,
-                        InsuranceType = newInsurance.InsuranceType,
-                        DateOpened = newInsurance.DateOpened,
-                        DateClosed = newInsurance.DateClosed,
-                        PaymentAmount = newInsurance.PaymentAmount,
-                        PaymentUnitCurrency = newInsurance.PaymentUnitCurrency,
-                        Description = newInsurance.Description,
-                        Frequency = newInsurance.Frequency,
-                        InsuranceState = newInsurance.InsuranceState,
+                        InsuranceType = newInsurance.Name, // Assuming 'Name' is the insurance type in your request model
+                        DateOpened = newInsurance.StartDate,
+                        DateClosed = (DateTime?)null, // Assuming DateClosed is null initially
+                        InsuranceState = !newInsurance.IsPaused,
+                        PaymentAmount = newInsurance.Payment,
+                        PaymentUnitCurrency = newInsurance.PaymentUnitCurrency, // Example value, should be set based on your requirements
                         InsuranceCompany = newInsurance.InsuranceCompany,
+                        Description = newInsurance.AdditionalInformation,
+                        Frequency = newInsurance.PaymentRate,
+                        AdditionalInformation = newInsurance.AdditionalInformation,
                         Country = newInsurance.Country
                     };
 
-                    var affectedRows = await connection.ExecuteAsync(queryInsurance, parameters);
+                    var insuranceId = await connection.QuerySingleAsync<int>(queryInsurance, parameters);
 
-                    if (affectedRows > 0)
+                    if (insuranceId > 0)
                     {
-                        return Ok("Insurance added successfully.");
+                        // Read the file data into a byte array and insert file records
+                        foreach (var file in newInsurance.Files)
+                        {
+                            if (file != null && file.Length > 0)
+                            {
+                                byte[] polizzeBytes;
+                                using (var memoryStream = new MemoryStream())
+                                {
+                                    await file.CopyToAsync(memoryStream);
+                                    polizzeBytes = memoryStream.ToArray();
+                                }
+
+                                var insertFileQuery = @"INSERT INTO files (FileInfo, FileType, RefID, RefTable) VALUES (@FileInfo, @FileType, @RefID, @RefTable);
+                                SELECT LAST_INSERT_ID();";
+
+                                var fileParameters = new
+                                {
+                                    FileInfo = polizzeBytes,
+                                    FileType = "I", // Assuming "I" is for insurance
+                                    RefID = insuranceId,
+                                    RefTable = "insurance" 
+                                };
+
+                                await connection.ExecuteAsync(insertFileQuery, fileParameters);
+                            }
+                        }
+
+                        return Ok(new { InsuranceId = insuranceId, Message = "Insurance and files added successfully." });
                     }
                     else
                     {
@@ -334,8 +353,6 @@ namespace FinanceLiquidityManager.Handler.Insurance
             {
                 return StatusCode(500, "Unable to process request");
             }
-
-
         }
 
 
@@ -624,19 +641,25 @@ public class InsuranceResponse
 }
 public class InsuranceModelRequest
 {
-    public string PolicyHolderId { get; set; }
-    public string InsuranceType { get; set; }
-    public DateTime DateOpened { get; set; }
-    public DateTime? DateClosed { get; set; }
-    public bool InsuranceState { get; set; }
-    public decimal PaymentAmount { get; set; }
-    public string PaymentUnitCurrency { get; set; }
+
+    public int Id { get; set; }
+    public string Iban { get; set; }
     public string InsuranceCompany { get; set; }
-    public string Description { get; set; }
-    public string Country { get; set; }
-    public string Frequency { get; set; }
+    public string Name { get; set; }
+    public string PaymentRate { get; set; }
+    public decimal Payment { get; set; }
+    public string PaymentUnitCurrency { get; set; }
+    public DateTime StartDate { get; set; }
+    public bool IsPaused { get; set; }
     public string AdditionalInformation { get; set; }
+    public DateTime NextPayment { get; set; }
+    public List<IFormFile> Files { get; set; }
+    public string InsuranceType { get; set; }
+    public string PolicyHolderId { get; set; }
+    public string Country { get; set; }
+    
 }
+
 public class InsuranceHistoryChartRespone
 {
     public List<InsuranceCost> InsuranceCosts { get; set; }
