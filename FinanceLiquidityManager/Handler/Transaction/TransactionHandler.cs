@@ -93,11 +93,11 @@ namespace FinanceLiquidityManager.Handler.Transaction
                     request.Accounts,
                     accountIds,
                 });
-                foreach(TransactionResponse res in transactions)
+                foreach (TransactionResponse res in transactions)
                 {
-                    if(res.AmountCurrency != Currency)
+                    if (res.AmountCurrency != Currency)
                     {
-                        res.Amount = CurrencyConverter.Convert(Currency,res.AmountCurrency,res.Amount);
+                        res.Amount = CurrencyConverter.Convert(Currency, res.AmountCurrency, res.Amount);
                         res.AmountCurrency = Currency;
                     }
                 }
@@ -119,23 +119,30 @@ namespace FinanceLiquidityManager.Handler.Transaction
             };
 
             DateTime adjustedDateTo = request.dateTo?.AddDays(1) ?? DateTime.MinValue;
-            foreach (string accountId in request.account)
-            {
-                var acc = new Account
-                {
-                    AccountName = accountId,
-                    Data = new List<AccountData>()
-                };
 
-                string query = "Select BookingDateTime as Date, BalanceAmount as Value, BalanceCurrency as Currency " +
-                               "from finance.transactions " +
-                               "WHERE AccountId = @AccountId " +
-                               "AND BookingDateTime Between @dateFrom AND @dateTo";
-                try
+            try
+            {
+                // Fetch AccountIds based on the user's name
+                string accountQuery = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+
+                using (var connection = new MySqlConnection(connectionString))
                 {
-                    using (var connection = new MySqlConnection(connectionString))
+                    var accountIds = await connection.QueryAsync<string>(accountQuery, new { Name = userId });
+
+                    foreach (string accountId in accountIds)
                     {
-                        var data = await connection.QueryAsync<AccountData>(query, new { AccountId = accountId, dateFrom = request.dateFrom, dateTo = adjustedDateTo });
+                        var acc = new Account
+                        {
+                            AccountName = accountId,
+                            Data = new List<AccountData>()
+                        };
+
+                        string transactionQuery = @"Select BookingDateTime as Date, BalanceAmount as Value, BalanceCurrency as Currency
+                                            from finance.transactions 
+                                            WHERE AccountId = @AccountId 
+                                            AND BookingDateTime Between @dateFrom AND @dateTo";
+
+                        var data = await connection.QueryAsync<AccountData>(transactionQuery, new { AccountId = accountId, dateFrom = request.dateFrom, dateTo = adjustedDateTo });
 
                         foreach (AccountData accData in data)
                         {
@@ -145,19 +152,21 @@ namespace FinanceLiquidityManager.Handler.Transaction
                                 accData.Currency = Currency;
                             }
                         }
+
                         acc.Data.AddRange(data);
                         response.Accounts[accountId] = acc;
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
-                    return new StatusCodeResult(500);
-                }
-            }
 
-            return Ok(response);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
+                return StatusCode(500);
+            }
         }
+
 
         public async Task<ActionResult> GetExpenseRevenueChartData(string userId, TransactionAreaChartModelRequest request, string Currency)
         {
@@ -169,83 +178,72 @@ namespace FinanceLiquidityManager.Handler.Transaction
             DateTime adjustedDateTo = request.dateTo?.AddDays(1) ?? DateTime.MinValue;
             List<TransactionexpenseRevenueChartResponseModel> response = new List<TransactionexpenseRevenueChartResponseModel>();
 
-            foreach (string accountId in request.account)
+            try
             {
-                string query = "Select BalanceCreditDebitIndicator as Indicator,InstructedAmount as Amount, InstructedCurrency as Currency, BookingDateTime as Date " +
-                               "from finance.transactions " +
-                               "WHERE AccountId = @AccountId " +
-                               "AND BookingDateTime Between @dateFrom AND @dateTo";
-                try
+                string query = @"Select BalanceCreditDebitIndicator as Indicator, InstructedAmount as Amount, InstructedCurrency as Currency, BookingDateTime as Date
+                         from finance.transactions 
+                         WHERE AccountId IN (SELECT AccountId FROM finance.accounts WHERE Name = @Name) 
+                         AND BookingDateTime BETWEEN @dateFrom AND @dateTo";
+
+                using (var connection = new MySqlConnection(connectionString))
                 {
-                    using (var connection = new MySqlConnection(connectionString))
+                    var data = await connection.QueryAsync<TransactionExepenseRevenueModel>(query, new { Name = userId, dateFrom = request.dateFrom, dateTo = adjustedDateTo });
+
+                    foreach (TransactionExepenseRevenueModel accData in data)
                     {
-                        var data = await connection.QueryAsync<TransactionExepenseRevenueModel>(query, new { AccountId = accountId, dateFrom = request.dateFrom, dateTo = adjustedDateTo });
-
-                        foreach (TransactionExepenseRevenueModel accData in data)
+                        if (accData.Currency != Currency)
                         {
-                            if (accData.Currency != Currency)
-                            {
-                                _logger.LogError(accData.amount.ToString());
-                                accData.amount = CurrencyConverter.Convert(Currency, accData.Currency, accData.amount);
-                                accData.Currency = Currency;
-                            }
-                            bool DayalreadyExists = false;
-                            foreach (TransactionexpenseRevenueChartResponseModel model in response)
-                            {
-                                if (model.date == accData.Date)
-                                {
-                                    DayalreadyExists = true;
-                                    if (accData.Indicator == "Credit")
-                                    {
-                                        model.currency = accData.Currency;
-                                        model.date = accData.Date;
-                                        model.revenue = model.revenue + accData.amount;
-                                    }
-                                    else
-                                    {
-                                        model.currency = accData.Currency;
-                                        model.date = accData.Date;
-                                        model.expense = model.revenue + accData.amount;
-                                    }
+                            accData.amount = CurrencyConverter.Convert(Currency, accData.Currency, accData.amount);
+                            accData.Currency = Currency;
+                        }
 
-                                }
-                            }
-                            if (!DayalreadyExists)
+                        var existingModel = response.FirstOrDefault(model => model.date == accData.Date);
+
+                        if (existingModel != null)
+                        {
+                            if (accData.Indicator == "Credit")
                             {
-                                if (accData.Indicator == "Credit")
-                                {
-                                    TransactionexpenseRevenueChartResponseModel res = new TransactionexpenseRevenueChartResponseModel
-                                    {
-                                        currency = accData.Currency,
-                                        date = accData.Date,
-                                        revenue = accData.amount
-                                    };
-                                    response.Add(res);
-                                }
-                                else
-                                {
-                                    TransactionexpenseRevenueChartResponseModel res = new TransactionexpenseRevenueChartResponseModel
-                                    {
-                                        currency = accData.Currency,
-                                        date = accData.Date,
-                                        expense = accData.amount
-                                    };
-                                    response.Add(res);
-                                }
+                                existingModel.currency = accData.Currency;
+                                existingModel.revenue += accData.amount;
                             }
+                            else
+                            {
+                                existingModel.currency = accData.Currency;
+                                existingModel.expense += accData.amount;
+                            }
+                        }
+                        else
+                        {
+                            var newModel = new TransactionexpenseRevenueChartResponseModel
+                            {
+                                currency = accData.Currency,
+                                date = accData.Date
+                            };
+
+                            if (accData.Indicator == "Credit")
+                            {
+                                newModel.revenue = accData.amount;
+                            }
+                            else
+                            {
+                                newModel.expense = accData.amount;
+                            }
+
+                            response.Add(newModel);
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
-                    return new StatusCodeResult(500);
-                }
-            }
 
-            return Ok(response);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
+                return StatusCode(500);
+            }
         }
     }
+
     public class CurrencyConverter
     {
         // Assume exchange rate from USD to EUR
