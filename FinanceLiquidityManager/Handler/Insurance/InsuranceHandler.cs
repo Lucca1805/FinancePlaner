@@ -398,7 +398,8 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     InsuranceCompany = @InsuranceCompany, 
                     Description = @Description, 
                     Country = @Country,
-                    Frequency = @Frequency
+                    Frequency = @Frequency,
+                    AdditionalInformation = @AdditionalInformation
                 WHERE InsuranceId = @InsuranceId";
 
                     var affectedRows = await connection.ExecuteAsync(updateQuery, updatedInsurance);
