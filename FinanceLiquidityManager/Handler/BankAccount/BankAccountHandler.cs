@@ -106,7 +106,7 @@ namespace FinanceLiquidityManager.Handler.BankAccount
                         {
                             deleted++;
                         }
-                        
+
                     }
                     if (deleted > 0)
                     {
@@ -194,6 +194,75 @@ namespace FinanceLiquidityManager.Handler.BankAccount
                 return new StatusCodeResult(500);
             }
         }
+
+        public async Task<ActionResult<IEnumerable<BankAccount>>> GetAllAccountsForUser(string userId, string CurrencyPreference)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(userId);
+                }
+
+                string query = @"
+            SELECT DISTINCT a.AccountId, a.Nickname AS AccountName, b.DisplayName AS BankName
+            FROM finance.accounts AS a
+            JOIN finance.bank_account AS ba ON ba.AccountId = a.AccountId
+            JOIN finance.bank AS b ON b.BankId = ba.BankId
+            WHERE a.Name = @Name";
+
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    _logger.LogInformation("Retrieving Accounts for user: {userId}", userId);
+                    List<BankAccountRequest> accounts = (await connection.QueryAsync<BankAccountRequest>(query, new { Name = userId })).ToList();
+
+                    if (accounts == null || !accounts.Any())
+                    {
+                        _logger.LogWarning("No Accounts found for user: {userId}", userId);
+                        return Ok(new List<BankAccount>());
+                    }
+
+                    _logger.LogInformation("Retrieved Accounts: {accountIds}", string.Join(", ", accounts.Select(a => a.accountId)));
+
+                    List<BankAccount> response = new List<BankAccount>();
+                    foreach (BankAccountRequest request in accounts)
+                    {
+                        string bankQuery = @"
+                    SELECT t.BalanceAmount as Balance, t.BalanceCurrency as Currency
+                    FROM finance.transactions AS t
+                    WHERE t.AccountId = @AccountId
+                    ORDER BY t.ValueDateTime DESC
+                    LIMIT 1";
+
+                        TransactionsForAccount transaction = await connection.QueryFirstOrDefaultAsync<TransactionsForAccount>(bankQuery, new { AccountId = request.accountId });
+                        if (transaction != null && transaction.currency != CurrencyPreference)
+                        {
+                            transaction.balance = CurrencyConverter.Convert(CurrencyPreference, transaction.currency, transaction.balance);
+                            transaction.currency = CurrencyPreference;
+                        }
+                        _logger.LogInformation("Retrieved transaction for AccountId: {accountId}, BalanceAmount: {balanceAmount}, BalanceCurrency: {balanceCurrency}",
+                        request.accountId, transaction.balance, transaction.currency);
+
+                        response.Add(new BankAccount
+                        {
+                            accountId = request.accountId,
+                            accountName = request.accountName,
+                            bankName = request.bankName,
+                            balance = transaction?.balance ?? 0 // Handle case where transaction is null
+                        });
+                    }
+
+                    _logger.LogInformation("All Bank Account Information successfully retrieved.");
+                    return Ok(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving bank accounts.");
+                return new StatusCodeResult(500);
+            }
+        }
+
     }
 
     public class BankAccountModel
@@ -205,5 +274,59 @@ namespace FinanceLiquidityManager.Handler.BankAccount
     public class AccountModel
     {
         public string AccountId { get; set; }
+    }
+
+    public class BankAccount
+    {
+        public string accountId { get; set; }
+        public string accountName { get; set; }
+        public double balance { get; set; }
+        public string bankName { get; set; }
+    }
+
+    public class BankAccountRequest
+    {
+        public string accountId { get; set; }
+        public string accountName { get; set; }
+        public string bankName { get; set; }
+
+    }
+
+    public class TransactionsForAccount
+    {
+        public double balance { get; set; }
+        public string currency { get; set; }
+    }
+    public class CurrencyConverter
+    {
+        // Assume exchange rate from USD to EUR
+        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
+
+        public static double Convert(string newCurrency, string oldCurrency, double Value)
+        {
+            if (newCurrency == "EUR" && oldCurrency == "USD")
+            {
+                return ConvertUsdToEur(Value);
+            }
+            else if (newCurrency == "USD" && oldCurrency == "EUR")
+            {
+                return ConvertEurToUsd(Value);
+            }
+            else
+            {
+                return (Value);
+            }
+        }
+        // Convert USD to EUR
+        public static double ConvertUsdToEur(double amountInUsd)
+        {
+            return amountInUsd * UsdToEurExchangeRate;
+        }
+
+        // Convert EUR to USD
+        public static double ConvertEurToUsd(double amountInEur)
+        {
+            return amountInEur / UsdToEurExchangeRate;
+        }
     }
 }

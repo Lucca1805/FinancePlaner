@@ -47,5 +47,13 @@ namespace FinanceLiquidityManager.Controllers
             return await _BankAccount.GetAllBankAccountsForUser(userId);
         }
 
+        [HttpGet("user/accounts")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<BankAccount>>> GetAllAccountsForUser()
+        {
+            var userId = User.FindFirstValue("UserId");
+            var CurrencyPreference = User.FindFirstValue("CurrencyPreference");
+            return await _BankAccount.GetAllAccountsForUser(userId,CurrencyPreference);
+        }
     }
 }
