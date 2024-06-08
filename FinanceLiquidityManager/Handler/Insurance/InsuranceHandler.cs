@@ -40,7 +40,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        public async Task<ActionResult> AddInsurance(string userId, [FromForm] InsuranceModelRequest newInsurance)
+        public async Task<ActionResult> AddInsurance(string userId, [FromBody] InsuranceModelRequest newInsurance)
         {
             try
             {
@@ -116,41 +116,11 @@ namespace FinanceLiquidityManager.Handler.Insurance
 
                     var insuranceId = await connection.QuerySingleAsync<int>(queryInsurance, parameters);
 
-                    if (insuranceId > 0)
-                    {
-                        // Read the file data into a byte array and insert file records
-                        foreach (var file in newInsurance.Files)
-                        {
-                            if (file != null && file.Length > 0)
-                            {
-                                byte[] polizzeBytes;
-                                using (var memoryStream = new MemoryStream())
-                                {
-                                    await file.CopyToAsync(memoryStream);
-                                    polizzeBytes = memoryStream.ToArray();
-                                }
+                     
 
-                                var insertFileQuery = @"INSERT INTO files (FileInfo, FileType, RefID, RefTable) VALUES (@FileInfo, @FileType, @RefID, @RefTable);
-                                SELECT LAST_INSERT_ID();";
-
-                                var fileParameters = new
-                                {
-                                    FileInfo = polizzeBytes,
-                                    FileType = "I", // Assuming "I" is for insurance
-                                    RefID = insuranceId,
-                                    RefTable = "insurance"
-                                };
-
-                                await connection.ExecuteAsync(insertFileQuery, fileParameters);
-                            }
-                        }
-
-                        return Ok(new { InsuranceId = insuranceId, Message = "Insurance and files added successfully." });
-                    }
-                    else
-                    {
-                        return BadRequest("Failed to add insurance.");
-                    }
+                    return Ok(new { InsuranceId = insuranceId, Message = "Insurance added successfully." });
+                    
+                    
                 }
             }
             catch (Exception ex)
@@ -668,7 +638,6 @@ public class InsuranceModelRequest
     public bool IsPaused { get; set; }
     public string AdditionalInformation { get; set; }
     public DateTime NextPayment { get; set; }
-    public List<IFormFile> Files { get; set; }
     public string InsuranceType { get; set; }
     public string PolicyHolderId { get; set; }
     public string Country { get; set; }
