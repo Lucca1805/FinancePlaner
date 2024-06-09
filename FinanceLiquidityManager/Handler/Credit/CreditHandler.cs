@@ -78,8 +78,11 @@ namespace FinanceLiquidityManager.Handler.Credit
                     {
                         if (loan.LoanUnitCurrency != CurrencyPreference)
                         {
-                            loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            decimal convertedCosts = await ConvertCurrency(loan.LoanAmount, loan.LoanUnitCurrency, CurrencyPreference);
+                            loan.LoanAmount = Math.Round(convertedCosts, 2);
                             loan.LoanUnitCurrency = CurrencyPreference;
+                            /*loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            loan.LoanUnitCurrency = CurrencyPreference;*/
                         }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
@@ -302,9 +305,12 @@ namespace FinanceLiquidityManager.Handler.Credit
                     {
                         if (loan.LoanUnitCurrency != CurrencyPreference)
                         {
-                            _logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);
+                            decimal convertedCosts = await ConvertCurrency(loan.LoanAmount, loan.LoanUnitCurrency, CurrencyPreference);
+                            loan.LoanAmount = Math.Round(convertedCosts, 2);
+                            loan.LoanUnitCurrency = CurrencyPreference;
+                            /*_logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);
                             loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
-                            _logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);
+                            _logger.LogInformation((int)loan.LoanAmount,CurrencyPreference,loan.LoanUnitCurrency);*/
                             //loan.LoanUnitCurrency = CurrencyPreference;
                         }
                     }
@@ -357,7 +363,10 @@ namespace FinanceLiquidityManager.Handler.Credit
                     {
                         if (loan.LoanUnitCurrency != CurrencyPreference)
                         {
-                            loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            /*loan.LoanAmount = (decimal)CurrencyConverter.Convert(CurrencyPreference, loan.LoanUnitCurrency, (double)loan.LoanAmount);
+                            loan.LoanUnitCurrency = CurrencyPreference;*/
+                            decimal convertedCosts = await ConvertCurrency(loan.LoanAmount, loan.LoanUnitCurrency, CurrencyPreference);
+                            loan.LoanAmount = Math.Round(convertedCosts, 2);
                             loan.LoanUnitCurrency = CurrencyPreference;
                         }
                     }
@@ -499,7 +508,19 @@ namespace FinanceLiquidityManager.Handler.Credit
                 return StatusCode(500, "Unable To Process Request");
             }
         }
-
+        public async Task<decimal> ConvertCurrency(decimal amount, string baseCurrency, string targetCurrency)
+        {
+            try
+            {
+                // Use the CurrencyExchangeService to convert the amount
+                CurrencyExchangeService exchangeService = new CurrencyExchangeService();
+                return await exchangeService.ConvertCurrency(amount, baseCurrency, targetCurrency);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error converting currency: {ex.Message}");
+            }
+        }
     }
     public class LoanPutModel
     {
@@ -587,37 +608,5 @@ namespace FinanceLiquidityManager.Handler.Credit
     public class AccountModel
     {
         public string AccountId { get; set; }
-    }
-    public class CurrencyConverter
-    {
-        // Assume exchange rate from USD to EUR
-        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
-
-        public static double Convert(string newCurrency, string oldCurrency, double Value)
-        {
-            if (newCurrency == "EUR" && oldCurrency == "USD")
-            {
-                return ConvertUsdToEur(Value);
-            }
-            else if (newCurrency == "USD" && oldCurrency == "EUR")
-            {
-                return ConvertEurToUsd(Value);
-            }
-            else
-            {
-                return (Value);
-            }
-        }
-        // Convert USD to EUR
-        public static double ConvertUsdToEur(double amountInUsd)
-        {
-            return amountInUsd * UsdToEurExchangeRate;
-        }
-
-        // Convert EUR to USD
-        public static double ConvertEurToUsd(double amountInEur)
-        {
-            return amountInEur / UsdToEurExchangeRate;
-        }
     }
 }

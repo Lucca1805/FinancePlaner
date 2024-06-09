@@ -237,8 +237,11 @@ namespace FinanceLiquidityManager.Handler.BankAccount
                         TransactionsForAccount transaction = await connection.QueryFirstOrDefaultAsync<TransactionsForAccount>(bankQuery, new { AccountId = request.accountId });
                         if (transaction != null && transaction.currency != CurrencyPreference)
                         {
-                            transaction.balance = CurrencyConverter.Convert(CurrencyPreference, transaction.currency, transaction.balance);
-                            transaction.currency = CurrencyPreference;
+                            
+                            decimal convertedCosts = await ConvertCurrency((decimal)transaction.balance, transaction.currency, CurrencyPreference);
+                            transaction.balance = (double)Math.Round(convertedCosts,2);
+                            /*transaction.balance = CurrencyConverter.Convert(CurrencyPreference, transaction.currency, transaction.balance);
+                            transaction.currency = CurrencyPreference;*/
                         }
                         _logger.LogInformation("Retrieved transaction for AccountId: {accountId}, BalanceAmount: {balanceAmount}, BalanceCurrency: {balanceCurrency}",
                         request.accountId, transaction.balance, transaction.currency);
@@ -263,6 +266,19 @@ namespace FinanceLiquidityManager.Handler.BankAccount
             }
         }
 
+        public async Task<decimal> ConvertCurrency(decimal amount, string baseCurrency, string targetCurrency)
+        {
+            try
+            {
+                // Use the CurrencyExchangeService to convert the amount
+                CurrencyExchangeService exchangeService = new CurrencyExchangeService();
+                return await exchangeService.ConvertCurrency(amount, baseCurrency, targetCurrency);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error converting currency: {ex.Message}");
+            }
+        }
     }
 
     public class BankAccountModel
@@ -296,37 +312,5 @@ namespace FinanceLiquidityManager.Handler.BankAccount
     {
         public double balance { get; set; }
         public string currency { get; set; }
-    }
-    public class CurrencyConverter
-    {
-        // Assume exchange rate from USD to EUR
-        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
-
-        public static double Convert(string newCurrency, string oldCurrency, double Value)
-        {
-            if (newCurrency == "EUR" && oldCurrency == "USD")
-            {
-                return ConvertUsdToEur(Value);
-            }
-            else if (newCurrency == "USD" && oldCurrency == "EUR")
-            {
-                return ConvertEurToUsd(Value);
-            }
-            else
-            {
-                return (Value);
-            }
-        }
-        // Convert USD to EUR
-        public static double ConvertUsdToEur(double amountInUsd)
-        {
-            return amountInUsd * UsdToEurExchangeRate;
-        }
-
-        // Convert EUR to USD
-        public static double ConvertEurToUsd(double amountInEur)
-        {
-            return amountInEur / UsdToEurExchangeRate;
-        }
     }
 }

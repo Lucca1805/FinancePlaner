@@ -197,10 +197,10 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     {
                         if (ins.PaymentUnitCurrency != currency)
                         {
-                            ins.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, ins.PaymentUnitCurrency, (double)ins.PaymentAmount);
+
+                            decimal convertedAmount = await ConvertCurrency(ins.PaymentAmount, ins.PaymentUnitCurrency, currency);
+                            ins.PaymentAmount = Math.Round(convertedAmount,2);
                             ins.PaymentUnitCurrency = currency;
-                            /*ins.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,ins.PaymentInstalmentUnitCurrency,(double)ins.PaymentInstalmentAmount); 
-                            ins.PaymentInstalmentUnitCurrency = currency;*/
                         }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
@@ -270,10 +270,9 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         insurance.nextPayment = nextPaymentDate;
                         if (insurance.PaymentUnitCurrency != currency)
                         {
-                            insurance.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, insurance.PaymentUnitCurrency, (double)insurance.PaymentAmount);
+                            decimal convertedAmount = await ConvertCurrency(insurance.PaymentAmount, insurance.PaymentUnitCurrency, currency);
+                            insurance.PaymentAmount = Math.Round(convertedAmount,2);
                             insurance.PaymentUnitCurrency = currency;
-                            /*insurance.PaymentInstalmentAmount = (decimal)CurrencyConverter.Convert(currency,insurance.PaymentInstalmentUnitCurrency,(double)insurance.PaymentInstalmentAmount); 
-                            insurance.PaymentInstalmentUnitCurrency = currency;*/
                         }
                     }
                     _logger.LogInformation("All standingOrders successfully retrieved.");
@@ -452,12 +451,18 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     {
                         if (currency != content.Currency)
                         {
-                            content.Cost = CurrencyConverter.Convert(currency, content.Currency, content.Cost);
+                            decimal convertedAmount = await ConvertCurrency((decimal)content.Cost, content.Currency, currency);
+                            content.Cost =(double) Math.Round(convertedAmount,2);
+                            content.Currency = currency;
                         }
+                        // Get the current date
+                        DateTime currentDate = DateTime.Now;
 
+                        // Extract the month component from the current date
+                        int currentMonth = currentDate.Month + 1;
                         if (content.intervall == "Monthly")
                         {
-                            for (int monthCounter = 1; monthCounter < 13; monthCounter++)
+                            for (int monthCounter = 1; monthCounter < currentMonth; monthCounter++)
                             {
                                 response.InsuranceCosts.Add(
                                     new InsuranceCost
@@ -472,34 +477,28 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         }
                         else if (content.intervall == "Quarterly")
                         {
-                            content.Cost = content.Cost / 4;
-                            int month = 0;
-                            for (int monthCounter = 1; monthCounter < 4; monthCounter++)
+                            // Calculate the number of quarters until the current month
+                            int numberOfQuarters = (currentMonth - 1) / 3 + 1;
+
+                            for (int quarterCounter = 1; quarterCounter <= numberOfQuarters; quarterCounter++)
                             {
-                                switch (monthCounter)
+                                int startingMonthOfQuarter = (quarterCounter - 1) * 3 + 1;
+                                int endingMonthOfQuarter = quarterCounter * 3;
+
+                                if (currentMonth >= startingMonthOfQuarter)
                                 {
-                                    case 1:
-                                        month = 1;
-                                        break;
-                                    case 2:
-                                        month = 4;
-                                        break;
-                                    case 3:
-                                        month = 7;
-                                        break;
-                                    case 4:
-                                        month = 10;
-                                        break;
-                                }
-                                response.InsuranceCosts.Add(
-                                    new InsuranceCost
-                                    {
-                                        Cost = Math.Round(content.Cost, 2),
-                                        Currency = currency,
-                                        Insurance = content.Type,
-                                        Month = MonthConverter.GetMonthName(month)
-                                    }
+                                    double adjustedCost = content.Cost / 3; // Divide the yearly cost by 4 quarters
+
+                                    response.InsuranceCosts.Add(
+                                        new InsuranceCost
+                                        {
+                                            Cost = Math.Round(adjustedCost, 2),
+                                            Currency = currency,
+                                            Insurance = content.Type,
+                                            Month = $"Q{quarterCounter}"
+                                        }
                                     );
+                                }
                             }
                         }
                         else
@@ -565,15 +564,15 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     {
                         if (insurance.Frequency == "Monthly")
                         {
-                             monthlyPayment = Math.Round(insurance.PaymentAmount);
+                            monthlyPayment = Math.Round(insurance.PaymentAmount);
                         }
                         else if (insurance.Frequency == "Quaterly")
                         {
-                             quarterPayment = Math.Round(insurance.PaymentAmount);
+                            quarterPayment = Math.Round(insurance.PaymentAmount);
                         }
                         else
                         {
-                             yearlyPayment = Math.Round(insurance.PaymentAmount);
+                            yearlyPayment = Math.Round(insurance.PaymentAmount);
                         }
                         // Calculate the interval payments
                         /* var totalMonths = (insurance.DateClosed.HasValue ?
@@ -586,13 +585,17 @@ namespace FinanceLiquidityManager.Handler.Insurance
                          var yearlyPayment = Math.Round(monthlyPayment * 12, 2);
  */
                         // Determine costs for the next month
-                        var costsNextMonth = monthlyPayment + (quarterPayment/4) + (yearlyPayment/12);
+                        var costsNextMonth = monthlyPayment + (quarterPayment / 4) + (yearlyPayment / 12);
                         if (insurance.PaymentUnitCurrency != currency)
                         {
-                            monthlyCost = (decimal)CurrencyConverter.Convert(currency, insurance.PaymentUnitCurrency, (double)monthlyPayment);
-                            quarterCost = (decimal)CurrencyConverter.Convert(currency, insurance.PaymentUnitCurrency, (double)quarterPayment);
-                            yearlyCost = (decimal)CurrencyConverter.Convert(currency, insurance.PaymentUnitCurrency, (double)yearlyPayment);
-                            NextMonthCosts = (decimal)CurrencyConverter.Convert(currency, insurance.PaymentUnitCurrency, (double)costsNextMonth);
+                            decimal convertedMonthlyAmount = await ConvertCurrency(monthlyPayment, insurance.PaymentUnitCurrency, currency);
+                            monthlyCost = Math.Round(convertedMonthlyAmount,2);
+                            decimal convertedQuaterlyCost = await ConvertCurrency(quarterPayment, insurance.PaymentUnitCurrency, currency);
+                            quarterCost = Math.Round(convertedQuaterlyCost,2);
+                            decimal convertedYearlyCost = await ConvertCurrency(yearlyPayment, insurance.PaymentUnitCurrency, currency);
+                            yearlyCost = Math.Round(convertedYearlyCost,2);
+                            decimal convertedNextMonthCost = await ConvertCurrency(costsNextMonth, insurance.PaymentUnitCurrency, currency);
+                            NextMonthCosts = Math.Round(convertedNextMonthCost,2);
                         }
                         monthlyCost += monthlyCost + monthlyPayment;
                         quarterCost += quarterCost + quarterPayment;
@@ -616,7 +619,19 @@ namespace FinanceLiquidityManager.Handler.Insurance
                 return new StatusCodeResult(500);
             }
         }
-
+        public async Task<decimal> ConvertCurrency(decimal amount, string baseCurrency, string targetCurrency)
+        {
+            try
+            {
+                // Use the CurrencyExchangeService to convert the amount
+                CurrencyExchangeService exchangeService = new CurrencyExchangeService();
+                return await exchangeService.ConvertCurrency(amount, baseCurrency, targetCurrency);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error converting currency: {ex.Message}");
+            }
+        }
     }
 }
 
@@ -696,6 +711,7 @@ public class InsuranceQueryModel
     public string Type { get; set; }
     public string Currency { get; set; }
 }
+/*
 public class CurrencyConverter
 {
     // Assume exchange rate from USD to EUR
@@ -728,7 +744,7 @@ public class CurrencyConverter
         return amountInEur / UsdToEurExchangeRate;
     }
 }
-
+*/
 public class MonthConverter
 {
     public static string GetMonthName(int monthNumber)

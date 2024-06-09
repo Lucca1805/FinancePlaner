@@ -97,7 +97,10 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 {
                     if (res.AmountCurrency != Currency)
                     {
-                        res.Amount = CurrencyConverter.Convert(Currency, res.AmountCurrency, res.Amount);
+                        /*res.Amount = CurrencyConverter.Convert(Currency, res.AmountCurrency, res.Amount);
+                        res.AmountCurrency = Currency;*/
+                        decimal convertedCosts = await ConvertCurrency((decimal)res.Amount, res.AmountCurrency, Currency);
+                        res.Amount = (double)Math.Round(convertedCosts, 2);
                         res.AmountCurrency = Currency;
                     }
                 }
@@ -148,7 +151,10 @@ namespace FinanceLiquidityManager.Handler.Transaction
                         {
                             if (accData.Currency != Currency)
                             {
-                                accData.Value = CurrencyConverter.Convert(Currency, accData.Currency, accData.Value);
+                                /*accData.Value = CurrencyConverter.Convert(Currency, accData.Currency, accData.Value);
+                                accData.Currency = Currency;*/
+                                decimal convertedCosts = await ConvertCurrency((decimal)accData.Value, accData.Currency, Currency);
+                                accData.Value = (double)Math.Round(convertedCosts, 2);
                                 accData.Currency = Currency;
                             }
                         }
@@ -193,7 +199,10 @@ namespace FinanceLiquidityManager.Handler.Transaction
                     {
                         if (accData.Currency != Currency)
                         {
-                            accData.amount = CurrencyConverter.Convert(Currency, accData.Currency, accData.amount);
+                            /*accData.amount = CurrencyConverter.Convert(Currency, accData.Currency, accData.amount);
+                            accData.Currency = Currency;*/
+                            decimal convertedCosts = await ConvertCurrency((decimal)accData.amount, accData.Currency, Currency);
+                            accData.amount = (double)Math.Round(convertedCosts, 2);
                             accData.Currency = Currency;
                         }
 
@@ -242,40 +251,21 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 return StatusCode(500);
             }
         }
+        public async Task<decimal> ConvertCurrency(decimal amount, string baseCurrency, string targetCurrency)
+        {
+            try
+            {
+                // Use the CurrencyExchangeService to convert the amount
+                CurrencyExchangeService exchangeService = new CurrencyExchangeService();
+                return await exchangeService.ConvertCurrency(amount, baseCurrency, targetCurrency);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error converting currency: {ex.Message}");
+            }
+        }
     }
 
-    public class CurrencyConverter
-    {
-        // Assume exchange rate from USD to EUR
-        private const double UsdToEurExchangeRate = 0.85; // 1 USD = 0.85 EUR
-
-        public static double Convert(string newCurrency, string oldCurrency, double Value)
-        {
-            if (newCurrency == "€" && oldCurrency == "USD")
-            {
-                return ConvertUsdToEur(Value);
-            }
-            else if (newCurrency == "USD" && oldCurrency == "€")
-            {
-                return ConvertEurToUsd(Value);
-            }
-            else
-            {
-                return (Value);
-            }
-        }
-        // Convert USD to EUR
-        public static double ConvertUsdToEur(double amountInUsd)
-        {
-            return amountInUsd * UsdToEurExchangeRate;
-        }
-
-        // Convert EUR to USD
-        public static double ConvertEurToUsd(double amountInEur)
-        {
-            return amountInEur / UsdToEurExchangeRate;
-        }
-    }
     public class TransactionModelRequest
     {
         public string? FreeText { get; set; }

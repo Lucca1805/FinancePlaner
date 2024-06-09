@@ -111,7 +111,10 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                         }
                         if (order.PaymentCurrency != currency)
                         {
-                            order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+                            /*order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+                            order.PaymentCurrency = currency;*/
+                            decimal convertedCosts = await ConvertCurrency(order.PaymentAmount, order.PaymentCurrency, currency);
+                            order.PaymentAmount = Math.Round(convertedCosts, 2);
                             order.PaymentCurrency = currency;
                         }
                         StandingOrderResponse StandingOrderRes = new StandingOrderResponse
@@ -213,8 +216,12 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                         }
                         if (order.PaymentCurrency != currency)
                         {
-                            order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+                            //order.PaymentAmount = (decimal)CurrencyConverter.Convert(currency, order.PaymentCurrency, (double)order.PaymentAmount);
+
+                            decimal convertedCosts = await ConvertCurrency(order.PaymentAmount, order.PaymentCurrency, currency);
+                            order.PaymentAmount = Math.Round(convertedCosts, 2);
                             order.PaymentCurrency = currency;
+
                         }
                         StandingOrderResponse StandingOrderRes = new StandingOrderResponse
                         {
@@ -244,7 +251,19 @@ namespace FinanceLiquidityManager.Handler.StandingOrder
                 return new StatusCodeResult(500);
             }
         }
-
+        public async Task<decimal> ConvertCurrency(decimal amount, string baseCurrency, string targetCurrency)
+        {
+            try
+            {
+                // Use the CurrencyExchangeService to convert the amount
+                CurrencyExchangeService exchangeService = new CurrencyExchangeService();
+                return await exchangeService.ConvertCurrency(amount, baseCurrency, targetCurrency);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error converting currency: {ex.Message}");
+            }
+        }
 
     }
 
