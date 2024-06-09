@@ -121,31 +121,31 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 Accounts = new Dictionary<string, Account>()
             };
 
-            DateTime adjustedDateTo = request.dateTo?.AddDays(1) ?? DateTime.MinValue;
+            DateTime adjustedDateTo = request.dateTo?.AddDays(1).Date ?? DateTime.MinValue;
 
-            try
+            foreach (string accountId in request.account)
             {
-                // Fetch AccountIds based on the user's name
-                string accountQuery = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
-
-                using (var connection = new MySqlConnection(connectionString))
+                var acc = new Account
                 {
-                    var accountIds = await connection.QueryAsync<string>(accountQuery, new { Name = userId });
+                    AccountName = accountId,
+                    Data = new List<AccountData>()
+                };
 
-                    foreach (string accountId in accountIds)
+                string query = @"
+            SELECT 
+                DATE(BookingDateTime) as Date, 
+                SUM(BalanceAmount) as Value, 
+                BalanceCurrency as Currency 
+            FROM finance.transactions 
+            WHERE AccountId = @AccountId 
+              AND DATE(BookingDateTime) BETWEEN @dateFrom AND @dateTo
+            GROUP BY DATE(BookingDateTime), BalanceCurrency";
+
+                try
+                {
+                    using (var connection = new MySqlConnection(connectionString))
                     {
-                        var acc = new Account
-                        {
-                            AccountName = accountId,
-                            Data = new List<AccountData>()
-                        };
-
-                        string transactionQuery = @"Select BookingDateTime as Date, BalanceAmount as Value, BalanceCurrency as Currency
-                                            from finance.transactions 
-                                            WHERE AccountId = @AccountId 
-                                            AND BookingDateTime Between @dateFrom AND @dateTo";
-
-                        var data = await connection.QueryAsync<AccountData>(transactionQuery, new { AccountId = accountId, dateFrom = request.dateFrom, dateTo = adjustedDateTo });
+                        var data = await connection.QueryAsync<AccountData>(query, new { AccountId = accountId, dateFrom = request.dateFrom?.Date, dateTo = adjustedDateTo });
 
                         foreach (AccountData accData in data)
                         {
@@ -163,14 +163,14 @@ namespace FinanceLiquidityManager.Handler.Transaction
                         response.Accounts[accountId] = acc;
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
+                    return new StatusCodeResult(500);
+                }
+            }
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while retrieving Transactions for Area Chart.");
-                return StatusCode(500);
-            }
+            return Ok(response);
         }
 
 
@@ -181,15 +181,15 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 return Unauthorized();
             }
 
-            DateTime adjustedDateTo = request.dateTo?.AddDays(1) ?? DateTime.MinValue;
+            DateTime adjustedDateTo = request.dateTo?.AddDays(1).Date ?? DateTime.MinValue;
             List<TransactionexpenseRevenueChartResponseModel> response = new List<TransactionexpenseRevenueChartResponseModel>();
 
             try
             {
-                string query = @"Select BalanceCreditDebitIndicator as Indicator, InstructedAmount as Amount, InstructedCurrency as Currency, BookingDateTime as Date
+                string query = @"Select BalanceCreditDebitIndicator as Indicator, InstructedAmount as Amount, InstructedCurrency as Currency, DATE(BookingDateTime) as Date
                          from finance.transactions 
                          WHERE AccountId IN (SELECT AccountId FROM finance.accounts WHERE Name = @Name) 
-                         AND BookingDateTime BETWEEN @dateFrom AND @dateTo";
+                         AND DATE(BookingDateTime) BETWEEN @dateFrom AND @dateTo";
 
                 using (var connection = new MySqlConnection(connectionString))
                 {
