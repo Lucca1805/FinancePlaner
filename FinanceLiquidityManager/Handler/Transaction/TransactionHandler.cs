@@ -61,7 +61,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 var queryBuilder = new StringBuilder(@"SELECT t.TransactionId, t.AccountId, t.AmountCurrency, t.TransactionIssuer, t.TransactionInformation, t.Amount, t.ExchangeRate, t.UnitCurrency, t.SupplementaryData, t.BookingDateTime, t.MerchantName,
                                                              b.BankId, b.bic FROM finance.transactions t
                                                             INNER JOIN finance.bank_account ba ON t.AccountId = ba.AccountId
-                                                            INNER JOIN finance.bank b ON ba.BankId = b.BankId");
+                                                            INNER JOIN finance.bank b ON ba.BankId = b.BankId order by t.BookingDateTime");
 
                 if (!string.IsNullOrEmpty(request.FreeText))
                 {
