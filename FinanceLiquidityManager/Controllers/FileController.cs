@@ -30,19 +30,21 @@ namespace FinanceLiquidityManager.Controllers
             _file = file;
 
         }
-        
+
 
         [HttpPost("user/upload/{CreditInsuranceID}")]
-        public async Task<ActionResult> UploadFileAsync(IFormFile file, string fileType, int refId)
+        public async Task<ActionResult> UploadFileAsync(int CreditInsuranceID, IFormFile file, string fileType)
         {
-            return await _file.UploadFileAsync(file, fileType, refId);
+            return await _file.UploadFileAsync(CreditInsuranceID, file, fileType);
         }
 
+
         [HttpGet("user/download/{CreditInsuranceID}")]
-        public async Task<ActionResult> DownloadFileAsync(int creditId)
+        public async Task<ActionResult> DownloadFilesAsync(int CreditInsuranceID)
         {
-            return await _file.DownloadFileAsync(creditId);
+            return await _file.DownloadFilesAsync(CreditInsuranceID);
         }
+
 
     }
 

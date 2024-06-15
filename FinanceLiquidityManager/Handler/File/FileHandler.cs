@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using FinanceLiquidityManager.Controllers;
 using FinanceLiquidityManager.Models;
+using System.IO.Compression;
 
 namespace FinanceLiquidityManager.Handler.File
 {
@@ -39,7 +40,7 @@ namespace FinanceLiquidityManager.Handler.File
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
         }
 
-        public async Task<ActionResult> UploadFileAsync(IFormFile fileData, string fileType, int refId)
+        public async Task<ActionResult> UploadFileAsync(int CreditInsuranceID, IFormFile fileData, string fileType)
         {
             try
             {
@@ -68,7 +69,7 @@ namespace FinanceLiquidityManager.Handler.File
                     {
                         FileInfo = fileBytes,
                         FileType = fileType,
-                        RefID = refId
+                        RefID = CreditInsuranceID
                     });
 
                     if (fileId > 0)
@@ -87,7 +88,7 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
-        public async Task<ActionResult> DownloadFileAsync(int creditInsuranceID)
+        public async Task<ActionResult> DownloadFilesAsync(int CreditInsuranceID)
         {
             try
             {
@@ -97,34 +98,54 @@ namespace FinanceLiquidityManager.Handler.File
 
                     // Query to get the file data
                     var query = @"SELECT FileInfo, FileType FROM files WHERE RefID = @RefID AND (FileType = 'I' OR FileType = 'L')";
-                    var file = await connection.QuerySingleOrDefaultAsync<FileRequest>(query, new { RefID = creditInsuranceID });
+                    var files = await connection.QueryAsync<FileRequest>(query, new { RefID = CreditInsuranceID });
 
-                    if (file == null)
+                    if (files == null || !files.Any())
                     {
-                        return NotFound("File not found.");
+                        return NotFound("Files not found.");
                     }
 
-                    // Return the file as a download
-                    return File(file.FileInfo, "application/octet-stream", $"file_{creditInsuranceID}.pdf");
+                    var fileList = files.ToList();
+
+                    // Create a zip file containing all the files
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        using (var zipArchive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                        {
+                            for (int i = 0; i < fileList.Count; i++)
+                            {
+                                var fileEntry = zipArchive.CreateEntry($"file_{CreditInsuranceID}_{i + 1}.pdf");
+
+                                using (var entryStream = fileEntry.Open())
+                                using (var fileStream = new MemoryStream(fileList[i].FileInfo))
+                                {
+                                    await fileStream.CopyToAsync(entryStream);
+                                }
+                            }
+                        }
+
+                        return File(memoryStream.ToArray(), "application/zip", $"files_{CreditInsuranceID}.zip");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 // Log the error
-                Console.WriteLine($"Ein Fehler ist aufgetreten: {ex.Message}");
-                return StatusCode(500, "Interner Serverfehler");
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                return StatusCode(500, "Internal server error");
             }
         }
 
-
     }
-
-    public class FileRequest
-    {
-
-        public byte[] FileInfo { get; set; } = null!;
-        public string FileType { get; set; }
-
-    }
-
 }
+
+
+public class FileRequest
+        {
+
+            public byte[] FileInfo { get; set; } = null!;
+            public string FileType { get; set; }
+
+        }
+
+
