@@ -200,6 +200,51 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
+        public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID)
+        {
+            try
+            {
+                // Validate inputs
+                if (CreditInsuranceID <= 0)
+                {
+                    return BadRequest("Invalid CreditInsuranceID or FileId.");
+                }
+
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Check if the file exists and belongs to the specified CreditInsuranceID
+                    string checkFileQuery = @"
+                SELECT COUNT(*) FROM finance.files WHERE RefID = @CreditInsuranceID;
+            ";
+
+                    int count = await connection.ExecuteScalarAsync<int>(checkFileQuery, new { CreditInsuranceID });
+
+                    if (count == 0)
+                    {
+                        return NotFound("File not found for the specified CreditInsuranceID.");
+                    }
+
+                    // Delete the file
+                    string deleteFileQuery = @"DELETE FROM finance.files WHERE RefID = @CreditInsuranceID";
+
+                    await connection.ExecuteAsync(deleteFileQuery, new { CreditInsuranceID = CreditInsuranceID });
+
+                  
+                        return Ok("File deleted successfully.");
+                   
+                     
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                return StatusCode(500, "Internal Server Error");
+            }
+        }
+
 
     }
 }
