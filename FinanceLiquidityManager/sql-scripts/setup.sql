@@ -111,6 +111,7 @@ CREATE TABLE finance.files (
     FileId int AUTO_INCREMENT PRIMARY KEY,
     FileInfo longblob  NOT NULL,
     FileType VARCHAR(1) NOT NULL,
+    FileName varchar(50) NOT NULL,
     RefID INT NOT NULL,
     RefTable VARCHAR(10),
     FOREIGN KEY (RefID) REFERENCES finance.loan(LoanId) on delete cascade,

@@ -17,6 +17,7 @@ using Dapper;
 using FinanceLiquidityManager.Controllers;
 using FinanceLiquidityManager.Models;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using FinanceLiquidityManager.Handler.File;
 using FinanceLiquidityManager.Handler.Insurance;
 
 namespace FinanceLiquidityManager.Handler.Credit
@@ -28,6 +29,7 @@ namespace FinanceLiquidityManager.Handler.Credit
         private readonly IConfiguration _configuration;
         private readonly string connectionString;
         private readonly ILogger<CreditController> _logger;
+        private readonly FileHandler _file;
         public CreditHandler(IConfiguration configuration, ILogger<CreditController> logger)
         {
             _configuration = configuration;
@@ -104,14 +106,14 @@ namespace FinanceLiquidityManager.Handler.Credit
             {
                 if (string.IsNullOrEmpty(userId))
                 {
-                    return Unauthorized();
+                    return Unauthorized("User ID is missing.");
                 }
 
                 // Fetch AccountId based on the user's name
                 string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
                 using (var connection = new MySqlConnection(connectionString))
                 {
-
+                    await connection.OpenAsync();
                     var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
                     var accountId = accountIds.FirstOrDefault();
 
@@ -123,72 +125,134 @@ namespace FinanceLiquidityManager.Handler.Credit
 
                     // Assign the accountId to the newLoan's CreditorAccountId
                     newLoan.CreditorAccountId = accountId;
-
-                    string queryLoan = @"
-                INSERT INTO finance.loan (
-                    CreditorAccountId, 
-                    LoanType, 
-                    LoanAmount, 
-                    LoanUnitCurrency, 
-                    InterestRate, 
-                    InterestRateUnitCurrency, 
-                    StartDate, 
-                    EndDate, 
-                    LoanStatus,
-                    Frequency,
-                    loanName,
-                    loanTerm,
-                    additionalCosts,
-                    effectiveInterestRate
-                ) VALUES (
-                    @CreditorAccountId, 
-                    @LoanType, 
-                    @LoanAmount, 
-                    @LoanUnitCurrency, 
-                    @InterestRate, 
-                    @InterestRateUnitCurrency, 
-                    @StartDate, 
-                    @EndDate, 
-                    @LoanStatus, 
-                    @Frequency,
-                    @loanName,
-                    @loanTerm,
-                    @additionalCosts,
-                    @effectiveInterestRate
-                );
-            ";
-
-                    await connection.OpenAsync();
-                    var command = new MySqlCommand(queryLoan, connection);
-                    command.Parameters.AddWithValue("@CreditorAccountId", newLoan.CreditorAccountId);
-                    command.Parameters.AddWithValue("@LoanType", newLoan.LoanType);
-                    command.Parameters.AddWithValue("@LoanAmount", newLoan.LoanAmount);
-                    command.Parameters.AddWithValue("@LoanUnitCurrency", newLoan.LoanUnitCurrency);
-                    command.Parameters.AddWithValue("@InterestRate", newLoan.InterestRate);
-                    command.Parameters.AddWithValue("@InterestRateUnitCurrency", newLoan.InterestRateUnitCurrency);
-                    command.Parameters.AddWithValue("@StartDate", newLoan.StartDate);
-                    command.Parameters.AddWithValue("@EndDate", newLoan.EndDate);
-                    command.Parameters.AddWithValue("@LoanStatus", newLoan.LoanStatus);
-                    command.Parameters.AddWithValue("@Frequency", newLoan.Frequency);
-                    command.Parameters.AddWithValue("@loanName", newLoan.loanName);
-                    command.Parameters.AddWithValue("@loanTerm", newLoan.loanTerm);
-                    command.Parameters.AddWithValue("@additionalCosts", newLoan.additionalCosts);
-                    command.Parameters.AddWithValue("@effectiveInterestRate", newLoan.effectiveInterestRate);
-                    var affectedRows = await command.ExecuteNonQueryAsync();
-
-                    if (affectedRows > 0)
+                    // Initialize FileRequests property if it's null
+                    if (newLoan.FileRequests == null)
                     {
-                        return Ok("Loan added successfully.");
+                        newLoan.FileRequests = new List<FileRequest>();
                     }
-                    else
+
+                    using (var transaction = connection.BeginTransaction())
                     {
-                        return BadRequest("Failed to add loan.");
+                        try
+                        {
+                            // Insert the loan record and retrieve the generated LoanId
+                            string queryLoan = @"
+                        INSERT INTO finance.loan (
+                            CreditorAccountId, 
+                            LoanType, 
+                            LoanAmount, 
+                            LoanUnitCurrency, 
+                            InterestRate, 
+                            InterestRateUnitCurrency, 
+                            StartDate, 
+                            EndDate, 
+                            LoanStatus,
+                            Frequency,
+                            loanName,
+                            loanTerm,
+                            additionalCosts,
+                            effectiveInterestRate
+                        ) VALUES (
+                            @CreditorAccountId, 
+                            @LoanType, 
+                            @LoanAmount, 
+                            @LoanUnitCurrency, 
+                            @InterestRate, 
+                            @InterestRateUnitCurrency, 
+                            @StartDate, 
+                            @EndDate, 
+                            @LoanStatus, 
+                            @Frequency,
+                            @loanName,
+                            @loanTerm,
+                            @additionalCosts,
+                            @effectiveInterestRate
+                        );
+                        SELECT LAST_INSERT_ID();
+                    ";
+
+                            var parameters = new
+                            {
+                                CreditorAccountId = newLoan.CreditorAccountId,
+                                LoanType = newLoan.LoanType,
+                                LoanAmount = newLoan.LoanAmount,
+                                LoanUnitCurrency = newLoan.LoanUnitCurrency,
+                                InterestRate = newLoan.InterestRate,
+                                InterestRateUnitCurrency = newLoan.InterestRateUnitCurrency,
+                                StartDate = newLoan.StartDate,
+                                EndDate = newLoan.EndDate,
+                                LoanStatus = newLoan.LoanStatus,
+                                Frequency = newLoan.Frequency,
+                                loanName = newLoan.loanName,
+                                loanTerm = newLoan.loanTerm,
+                                additionalCosts = newLoan.additionalCosts,
+                                effectiveInterestRate = newLoan.effectiveInterestRate
+                            };
+
+                            // Execute query to insert loan record and get loanId
+                            var loanId = await connection.QuerySingleAsync<int>(queryLoan, parameters, transaction: transaction);
+
+                            // Log the generated loanId
+                            Console.WriteLine($"Generated LoanId: {loanId}");
+
+                            // Handle file uploads if FileRequests is provided and contains valid data
+                            foreach (var fileRequest in newLoan.FileRequests)
+                            {
+                                // Check if the necessary fields are present in the FileRequest object
+                                if (fileRequest == null || fileRequest.FileInfo == null || fileRequest.FileInfo.Length == 0 || string.IsNullOrEmpty(fileRequest.FileType))
+                                {
+                                    transaction.Rollback();
+                                    return BadRequest("Invalid file request data.");
+                                }
+
+                                // Get and sanitize the file name (if available in FileRequest)
+                                string originalFileName = string.IsNullOrEmpty(fileRequest.FileName) ? "Unknown_File" : fileRequest.FileName;
+
+                                Console.WriteLine($"Original file name: {originalFileName}");
+
+                                // Insert the file data
+                                var insertFileQuery = @"
+                            INSERT INTO files (FileInfo, FileType, FileName, RefID) 
+                            VALUES (@FileInfo, @FileType, @FileName, @RefID);
+                            SELECT LAST_INSERT_ID();
+                        ";
+
+                                var fileId = await connection.QuerySingleAsync<int>(insertFileQuery, new
+                                {
+                                    FileInfo = fileRequest.FileInfo,
+                                    FileType = fileRequest.FileType,
+                                    FileName = originalFileName,
+                                    RefID = loanId // Use the insuranceId as RefID for file association
+                                }, transaction: transaction);
+
+                                if (fileId <= 0)
+                                {
+                                    transaction.Rollback();
+                                    return BadRequest("Failed to upload one or more files.");
+                                }
+                            }
+
+                            // No file uploaded case
+                            // Commit transaction for loan record insertion
+                            transaction.Commit();
+                            return Ok(new { LoanId = loanId, Message = "Loan and Files added successfully." });
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rollback the transaction in case of any failure
+                            transaction.Rollback();
+                            // Log the exception details (ex.Message) for debugging purposes.
+                            Console.WriteLine($"Exception: {ex.Message}");
+                            return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "Unable To Process Request");
+                // Log the exception details (ex.Message) for debugging purposes.
+                Console.WriteLine($"Exception: {ex.Message}");
+                return StatusCode(500, $"Unable To Process Request: {ex.Message}");
             }
         }
 
@@ -577,6 +641,8 @@ namespace FinanceLiquidityManager.Handler.Credit
         public int loanTerm { get; set; }
         public decimal? additionalCosts { get; set; }
         public decimal? effectiveInterestRate { get; set; }
+        public List<FileRequest> FileRequests { get; set; } = new List<FileRequest>();
+
 
     }
 

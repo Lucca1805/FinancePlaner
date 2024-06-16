@@ -33,9 +33,9 @@ namespace FinanceLiquidityManager.Controllers
 
 
         [HttpPost("user/upload/{CreditInsuranceID}")]
-        public async Task<ActionResult> UploadFileAsync(int CreditInsuranceID, IFormFile file, string fileType)
+        public async Task<ActionResult> UploadFileAsync(int CreditInsuranceID, [FromBody] List<FileRequest> fileRequest)
         {
-            return await _file.UploadFileAsync(CreditInsuranceID, file, fileType);
+            return await _file.UploadFileAsync(CreditInsuranceID, fileRequest);
         }
 
 
@@ -44,6 +44,13 @@ namespace FinanceLiquidityManager.Controllers
         {
             return await _file.DownloadFilesAsync(CreditInsuranceID);
         }
+
+        [HttpGet("user/files/{CreditInsuranceID}")]
+        public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID)
+        {
+            return await _file.GetFilesByCreditInsuranceIDAsync(CreditInsuranceID);
+        }
+
 
 
     }
