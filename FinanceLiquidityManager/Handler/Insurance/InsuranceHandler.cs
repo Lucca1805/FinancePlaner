@@ -17,6 +17,8 @@ using FinanceLiquidityManager.Controllers;
 using FinanceLiquidityManager.Models;
 using System.Collections;
 using FinanceLiquidityManager.Handler.Credit;
+using FinanceLiquidityManager.Handler.File;
+using Microsoft.VisualBasic.FileIO;
 
 namespace FinanceLiquidityManager.Handler.Insurance
 {
@@ -27,8 +29,10 @@ namespace FinanceLiquidityManager.Handler.Insurance
         private readonly IConfiguration _configuration;
         private readonly string connectionString;
         private readonly ILogger<InsuranceController> _logger;
-        public InsuranceHandler(IConfiguration configuration, ILogger<InsuranceController> logger)
+        private readonly FileHandler _file;
+        public InsuranceHandler(FileHandler file, IConfiguration configuration, ILogger<InsuranceController> logger)
         {
+            _file = file;
             _configuration = configuration;
             _logger = logger;
             var host = _configuration["DBHOST"] ?? "localhost";
@@ -38,6 +42,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             var usersDataBase = _configuration["MYSQL_DATABASE"] ?? _configuration.GetConnectionString("MYSQL_DATABASE");
 
             connectionString = $"server={host}; userid={userid};pwd={password};port={port};database={usersDataBase}";
+
         }
 
         public async Task<ActionResult> AddInsurance(string userId, [FromBody] InsuranceModelRequest newInsurance)
@@ -46,7 +51,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
             {
                 if (string.IsNullOrEmpty(userId))
                 {
-                    return Unauthorized();
+                    return Unauthorized("User ID is missing.");
                 }
 
                 // Fetch AccountId based on the user's name
@@ -66,70 +71,130 @@ namespace FinanceLiquidityManager.Handler.Insurance
                     // Assign the accountId to the newInsurance's PolicyHolderId
                     newInsurance.PolicyHolderId = accountId;
 
-                    // Insert the insurance record and retrieve the generated InsuranceId
-                    string queryInsurance = @"
-                INSERT INTO finance.insurance (
-                    PolicyHolderId, 
-                    InsuranceType, 
-                    DateOpened, 
-                    DateClosed, 
-                    InsuranceState, 
-                    PaymentAmount, 
-                    PaymentUnitCurrency, 
-                    InsuranceCompany, 
-                    Description, 
-                    Frequency, 
-                    AdditionalInformation,
-                    Country
-                ) VALUES (
-                    @PolicyHolderId, 
-                    @InsuranceType, 
-                    @DateOpened, 
-                    @DateClosed, 
-                    @InsuranceState, 
-                    @PaymentAmount, 
-                    @PaymentUnitCurrency, 
-                    @InsuranceCompany, 
-                    @Description, 
-                    @Frequency, 
-                    @AdditionalInformation,
-                    @Country
-                );
-                SELECT LAST_INSERT_ID();
-            ";
-
-                    var parameters = new
+                    // Initialize FileRequests property if it's null
+                    if (newInsurance.FileRequests == null)
                     {
-                        PolicyHolderId = newInsurance.PolicyHolderId,
-                        InsuranceType = newInsurance.Name, // Assuming 'Name' is the insurance type in your request model
-                        DateOpened = newInsurance.StartDate,
-                        DateClosed = (DateTime?)null, // Assuming DateClosed is null initially
-                        InsuranceState = !newInsurance.IsPaused,
-                        PaymentAmount = newInsurance.Payment,
-                        PaymentUnitCurrency = newInsurance.PaymentUnitCurrency, // Example value, should be set based on your requirements
-                        InsuranceCompany = newInsurance.InsuranceCompany,
-                        Description = newInsurance.AdditionalInformation,
-                        Frequency = newInsurance.PaymentRate,
-                        AdditionalInformation = newInsurance.AdditionalInformation,
-                        Country = newInsurance.Country
-                    };
+                        newInsurance.FileRequests = new List<FileRequest>();
+                    }
 
-                    var insuranceId = await connection.QuerySingleAsync<int>(queryInsurance, parameters);
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Insert the insurance record and retrieve the generated InsuranceId
+                            string queryInsurance = @"
+                        INSERT INTO finance.insurance (
+                            PolicyHolderId, 
+                            InsuranceType, 
+                            DateOpened, 
+                            DateClosed, 
+                            InsuranceState, 
+                            PaymentAmount, 
+                            PaymentUnitCurrency, 
+                            InsuranceCompany, 
+                            Description, 
+                            Frequency, 
+                            AdditionalInformation,
+                            Country
+                        ) VALUES (
+                            @PolicyHolderId, 
+                            @InsuranceType, 
+                            @DateOpened, 
+                            @DateClosed, 
+                            @InsuranceState, 
+                            @PaymentAmount, 
+                            @PaymentUnitCurrency, 
+                            @InsuranceCompany, 
+                            @Description, 
+                            @Frequency, 
+                            @AdditionalInformation,
+                            @Country
+                        );
+                        SELECT LAST_INSERT_ID();
+                    ";
 
-                     
+                            var parameters = new
+                            {
+                                PolicyHolderId = newInsurance.PolicyHolderId,
+                                InsuranceType = newInsurance.Name,
+                                DateOpened = newInsurance.StartDate,
+                                DateClosed = (DateTime?)null,
+                                InsuranceState = !newInsurance.IsPaused,
+                                PaymentAmount = newInsurance.Payment,
+                                PaymentUnitCurrency = newInsurance.PaymentUnitCurrency,
+                                InsuranceCompany = newInsurance.InsuranceCompany,
+                                Description = newInsurance.AdditionalInformation,
+                                Frequency = newInsurance.PaymentRate,
+                                AdditionalInformation = newInsurance.AdditionalInformation,
+                                Country = newInsurance.Country
+                            };
 
-                    return Ok(new { InsuranceId = insuranceId, Message = "Insurance added successfully." });
-                    
-                    
+                            // Execute query to insert insurance record and get insuranceId
+                            var insuranceId = await connection.QuerySingleAsync<int>(queryInsurance, parameters, transaction: transaction);
+
+                            // Log the generated insuranceId
+                            Console.WriteLine($"Generated InsuranceId: {insuranceId}");
+
+                            // Handle file uploads if FileRequests is provided and contains valid data
+                            foreach (var fileRequest in newInsurance.FileRequests)
+                            {
+                                // Check if the necessary fields are present in the FileRequest object
+                                if (fileRequest == null || fileRequest.FileInfo == null || fileRequest.FileInfo.Length == 0 || string.IsNullOrEmpty(fileRequest.FileType))
+                                {
+                                    transaction.Rollback();
+                                    return BadRequest("Invalid file request data.");
+                                }
+
+                                // Get and sanitize the file name (if available in FileRequest)
+                                string originalFileName = string.IsNullOrEmpty(fileRequest.FileName) ? "Unknown_File" : fileRequest.FileName;
+
+                                Console.WriteLine($"Original file name: {originalFileName}");
+
+                                // Insert the file data
+                                var insertFileQuery = @"
+                            INSERT INTO files (FileInfo, FileType, FileName, RefID) 
+                            VALUES (@FileInfo, @FileType, @FileName, @RefID);
+                            SELECT LAST_INSERT_ID();
+                        ";
+
+                                var fileId = await connection.QuerySingleAsync<int>(insertFileQuery, new
+                                {
+                                    FileInfo = fileRequest.FileInfo,
+                                    FileType = fileRequest.FileType,
+                                    FileName = originalFileName,
+                                    RefID = insuranceId // Use the insuranceId as RefID for file association
+                                }, transaction: transaction);
+
+                                if (fileId <= 0)
+                                {
+                                    transaction.Rollback();
+                                    return BadRequest("Failed to upload one or more files.");
+                                }
+                            }
+
+                            // Commit transaction after successful file insertions
+                            transaction.Commit();
+
+                            return Ok(new { InsuranceId = insuranceId, Message = "Insurance and files added successfully." });
+                        }
+                        catch (Exception ex)
+                        {
+                            // Rollback the transaction in case of any failure
+                            transaction.Rollback();
+                            // Log the exception details (ex.Message) for debugging purposes.
+                            Console.WriteLine($"Exception: {ex.Message}");
+                            return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
                 // Log the exception details (ex.Message) for debugging purposes.
+                Console.WriteLine($"Exception: {ex.Message}");
                 return StatusCode(500, $"Unable To Process Request: {ex.Message}");
             }
         }
-
 
 
         public async Task<ActionResult> GetOneInsurance(string userId, int insuranceId, string currency)
@@ -656,6 +721,8 @@ public class InsuranceModelRequest
     public string InsuranceType { get; set; }
     public string PolicyHolderId { get; set; }
     public string Country { get; set; }
+    public List<FileRequest> FileRequests { get; set; } = new List<FileRequest>();
+
 
 }
 
