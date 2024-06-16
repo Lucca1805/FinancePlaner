@@ -52,10 +52,10 @@ namespace FinanceLiquidityManager.Controllers
         }
 
         [HttpDelete("user/delete/{CreditInsuranceID}")]
-        public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID)
+        public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID, string FileName)
         {
 
-            return await _file.RemoveFileAsync(CreditInsuranceID);
+            return await _file.RemoveFileAsync(CreditInsuranceID, FileName);
         }
 
 

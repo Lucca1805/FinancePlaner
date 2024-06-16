@@ -200,14 +200,14 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
-        public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID)
+        public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID, string FileName)
         {
             try
             {
                 // Validate inputs
-                if (CreditInsuranceID <= 0)
+                if (CreditInsuranceID <= 0 || string.IsNullOrEmpty(FileName))
                 {
-                    return BadRequest("Invalid CreditInsuranceID or FileId.");
+                    return BadRequest("Invalid CreditInsuranceID or FileName.");
                 }
 
                 using (var connection = new MySqlConnection(connectionString))
@@ -216,25 +216,24 @@ namespace FinanceLiquidityManager.Handler.File
 
                     // Check if the file exists and belongs to the specified CreditInsuranceID
                     string checkFileQuery = @"
-                SELECT COUNT(*) FROM finance.files WHERE RefID = @CreditInsuranceID;
+                SELECT COUNT(*) FROM finance.files WHERE RefID = @CreditInsuranceID and FileName = @FileName;
             ";
 
-                    int count = await connection.ExecuteScalarAsync<int>(checkFileQuery, new { CreditInsuranceID });
+                    // ExecuteScalarAsync will return the count directly
+                    int count = await connection.ExecuteScalarAsync<int>(checkFileQuery, new { CreditInsuranceID, FileName });
 
                     if (count == 0)
                     {
-                        return NotFound("File not found for the specified CreditInsuranceID.");
+                        return NotFound($"File '{FileName}' not found for the specified CreditInsuranceID.");
                     }
 
                     // Delete the file
-                    string deleteFileQuery = @"DELETE FROM finance.files WHERE RefID = @CreditInsuranceID";
+                    string deleteFileQuery = @"DELETE FROM finance.files WHERE RefID = @CreditInsuranceID and FileName = @FileName";
 
-                    await connection.ExecuteAsync(deleteFileQuery, new { CreditInsuranceID = CreditInsuranceID });
+                    // Use an anonymous object to pass parameters
+                    await connection.ExecuteAsync(deleteFileQuery, new { CreditInsuranceID, FileName });
 
-                  
-                        return Ok("File deleted successfully.");
-                   
-                     
+                    return Ok($"File '{FileName}' deleted successfully.");
                 }
             }
             catch (Exception ex)
