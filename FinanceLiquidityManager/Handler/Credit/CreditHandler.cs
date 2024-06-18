@@ -73,7 +73,7 @@ namespace FinanceLiquidityManager.Handler.Credit
                     // Fetch insurances for each AccountId
 
                     _logger.LogInformation("Fetching standingOrders for AccountId: {accountId}", accountIds);
-                    string loanQuery = @"SELECT l.*, f.FileInfo, f.FileType FROM finance.loan l LEFT JOIN finance.files f ON f.RefID = l.LoanId WHERE l.LoanId = @LoanId;";
+                    string loanQuery = @"SELECT l.* FROM finance.loan l WHERE l.LoanId = @LoanId;";
                     var loans = await connection.QueryAsync<LoanModel>(loanQuery, new { CreditorAccountId = accountIds, loanId });
 
                     foreach (LoanModel loan in loans)
