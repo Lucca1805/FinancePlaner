@@ -123,7 +123,7 @@ namespace FinanceLiquidityManager.Handler.Insurance
                                 PaymentAmount = newInsurance.Payment,
                                 PaymentUnitCurrency = newInsurance.PaymentUnitCurrency,
                                 InsuranceCompany = newInsurance.InsuranceCompany,
-                                Description = newInsurance.AdditionalInformation,
+                                Description = newInsurance.Description,
                                 Frequency = newInsurance.PaymentRate,
                                 AdditionalInformation = newInsurance.AdditionalInformation,
                                 Country = newInsurance.Country
@@ -716,6 +716,7 @@ public class InsuranceModelRequest
     public string PaymentUnitCurrency { get; set; }
     public DateTime StartDate { get; set; }
     public bool IsPaused { get; set; }
+    public string Description { get; set; }
     public string AdditionalInformation { get; set; }
     public DateTime NextPayment { get; set; }
     public string InsuranceType { get; set; }

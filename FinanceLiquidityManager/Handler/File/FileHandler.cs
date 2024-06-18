@@ -118,7 +118,8 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
-        public async Task<ActionResult> DownloadFilesAsync(int CreditInsuranceID)
+
+        public async Task<ActionResult> DownloadFileAsync(int CreditInsuranceID)
         {
             try
             {
@@ -127,35 +128,18 @@ namespace FinanceLiquidityManager.Handler.File
                     await connection.OpenAsync();
 
                     // Query to get the file data
-                    var query = @"SELECT FileInfo, FileType FROM files WHERE RefID = @RefID AND (FileType = 'I' OR FileType = 'L')";
-                    var files = await connection.QueryAsync<FileRequest>(query, new { RefID = CreditInsuranceID });
+                    var query = @"SELECT FileInfo, FileType FROM files WHERE FileId = @FileId AND (FileType = 'I' OR FileType = 'L')";
+                    var file = await connection.QueryFirstOrDefaultAsync<FileRequest>(query, new { FileId = CreditInsuranceID });
 
-                    if (files == null || !files.Any())
+                    if (file == null)
                     {
-                        return NotFound("Files not found.");
+                        return NotFound("File not found.");
                     }
 
-                    var fileList = files.ToList();
+                    // Convert the file to a base64 string
+                    var base64File = Convert.ToBase64String(file.FileInfo);
 
-                    // Create a zip file containing all the files
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        using (var zipArchive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
-                        {
-                            for (int i = 0; i < fileList.Count; i++)
-                            {
-                                var fileEntry = zipArchive.CreateEntry($"file_{CreditInsuranceID}_{i + 1}.pdf");
-
-                                using (var entryStream = fileEntry.Open())
-                                using (var fileStream = new MemoryStream(fileList[i].FileInfo))
-                                {
-                                    await fileStream.CopyToAsync(entryStream);
-                                }
-                            }
-                        }
-
-                        return File(memoryStream.ToArray(), "application/zip", $"files_{CreditInsuranceID}.zip");
-                    }
+                    return Ok(new { FileType = file.FileType, Base64File = base64File });
                 }
             }
             catch (Exception ex)
@@ -166,7 +150,8 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
-        public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID)
+
+        public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID, string FileType)
         {
             try
             {
@@ -175,8 +160,8 @@ namespace FinanceLiquidityManager.Handler.File
                     await connection.OpenAsync();
 
                     // Query to get all files for the given CreditInsuranceID
-                    var query = @"SELECT FileId, FileName FROM files WHERE RefID = @RefID";
-                    var files = await connection.QueryAsync<FileResponse>(query, new { RefID = CreditInsuranceID });
+                    var query = @"SELECT FileId, FileName FROM files WHERE RefID = @RefID and FileType= @FileType";
+                    var files = await connection.QueryAsync<FileResponse>(query, new { RefID = CreditInsuranceID, FileType = FileType });
 
                     if (files == null || !files.Any())
                     {

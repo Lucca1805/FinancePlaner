@@ -42,13 +42,13 @@ namespace FinanceLiquidityManager.Controllers
         [HttpGet("user/download/{CreditInsuranceID}")]
         public async Task<ActionResult> DownloadFilesAsync(int CreditInsuranceID)
         {
-            return await _file.DownloadFilesAsync(CreditInsuranceID);
+            return await _file.DownloadFileAsync(CreditInsuranceID);
         }
 
         [HttpGet("user/files/{CreditInsuranceID}")]
-        public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID)
+        public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID, string FileType)
         {
-            return await _file.GetFilesByCreditInsuranceIDAsync(CreditInsuranceID);
+            return await _file.GetFilesByCreditInsuranceIDAsync(CreditInsuranceID, FileType);
         }
 
         [HttpDelete("user/delete/{CreditInsuranceID}")]
