@@ -100,43 +100,44 @@ namespace FinanceLiquidityManager.Handler.Credit
 
 
 
-        public async Task<ActionResult> AddLoan(string userId, [FromBody] LoanModelCreateRequest newLoan)
+public async Task<ActionResult> AddLoan(string userId, [FromBody] LoanModelCreateRequest newLoan)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(userId))
         {
-            try
+            return Unauthorized("User ID is missing.");
+        }
+
+        // Fetch AccountId based on the user's name
+        string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
+            var accountId = accountIds.FirstOrDefault();
+
+            // Check if accountId is null or empty
+            if (string.IsNullOrEmpty(accountId))
             {
-                if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User account not found.");
+            }
+
+            // Assign the accountId to the newLoan's CreditorAccountId
+            newLoan.CreditorAccountId = accountId;
+
+            // Initialize FileRequests property if it's null
+            if (newLoan.FileRequests == null)
+            {
+                newLoan.FileRequests = new List<FileRequest>();
+            }
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
                 {
-                    return Unauthorized("User ID is missing.");
-                }
-
-                // Fetch AccountId based on the user's name
-                string queryAccountId = @"SELECT AccountId FROM finance.accounts WHERE Name = @Name";
-                using (var connection = new MySqlConnection(connectionString))
-                {
-                    await connection.OpenAsync();
-                    var accountIds = await connection.QueryAsync<string>(queryAccountId, new { Name = userId });
-                    var accountId = accountIds.FirstOrDefault();
-
-                    // Check if accountId is null or empty
-                    if (string.IsNullOrEmpty(accountId))
-                    {
-                        return Unauthorized("User account not found.");
-                    }
-
-                    // Assign the accountId to the newLoan's CreditorAccountId
-                    newLoan.CreditorAccountId = accountId;
-                    // Initialize FileRequests property if it's null
-                    if (newLoan.FileRequests == null)
-                    {
-                        newLoan.FileRequests = new List<FileRequest>();
-                    }
-
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Insert the loan record and retrieve the generated LoanId
-                            string queryLoan = @"
+                    // Insert the loan record and retrieve the generated LoanId
+                    string queryLoan = @"
                         INSERT INTO finance.loan (
                             CreditorAccountId, 
                             LoanType, 
@@ -171,37 +172,45 @@ namespace FinanceLiquidityManager.Handler.Credit
                         SELECT LAST_INSERT_ID();
                     ";
 
-                            var parameters = new
-                            {
-                                CreditorAccountId = newLoan.CreditorAccountId,
-                                LoanType = newLoan.LoanType,
-                                LoanAmount = newLoan.LoanAmount,
-                                LoanUnitCurrency = newLoan.LoanUnitCurrency,
-                                InterestRate = newLoan.InterestRate,
-                                InterestRateUnitCurrency = newLoan.InterestRateUnitCurrency,
-                                StartDate = newLoan.StartDate,
-                                EndDate = newLoan.EndDate,
-                                LoanStatus = newLoan.LoanStatus,
-                                Frequency = newLoan.Frequency,
-                                loanName = newLoan.loanName,
-                                loanTerm = newLoan.loanTerm,
-                                additionalCosts = newLoan.additionalCosts,
-                                effectiveInterestRate = newLoan.effectiveInterestRate
-                            };
+                    var parameters = new
+                    {
+                        CreditorAccountId = newLoan.CreditorAccountId,
+                        LoanType = newLoan.LoanType,
+                        LoanAmount = newLoan.LoanAmount,
+                        LoanUnitCurrency = newLoan.LoanUnitCurrency,
+                        InterestRate = newLoan.InterestRate,
+                        InterestRateUnitCurrency = newLoan.InterestRateUnitCurrency,
+                        StartDate = newLoan.StartDate,
+                        EndDate = newLoan.EndDate,
+                        LoanStatus = newLoan.LoanStatus,
+                        Frequency = newLoan.Frequency,
+                        loanName = newLoan.loanName,
+                        loanTerm = newLoan.loanTerm,
+                        additionalCosts = newLoan.additionalCosts,
+                        effectiveInterestRate = newLoan.effectiveInterestRate
+                    };
 
-                            // Execute query to insert loan record and get loanId
-                            var loanId = await connection.QuerySingleAsync<int>(queryLoan, parameters, transaction: transaction);
+                    // Execute query to insert loan record and get loanId
+                    var loanId = await connection.QuerySingleAsync<int>(queryLoan, parameters, transaction: transaction);
 
-                            // Log the generated loanId
-                            Console.WriteLine($"Generated LoanId: {loanId}");
+                    // Log the generated loanId
+                    Console.WriteLine($"Generated LoanId: {loanId}");
 
+                    // Commit the loan transaction first
+                    await transaction.CommitAsync();
+
+                    // Start a new transaction for file insertion
+                    using (var fileTransaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
                             // Handle file uploads if FileRequests is provided and contains valid data
                             foreach (var fileRequest in newLoan.FileRequests)
                             {
                                 // Check if the necessary fields are present in the FileRequest object
                                 if (fileRequest == null || fileRequest.FileInfo == null || fileRequest.FileInfo.Length == 0 || string.IsNullOrEmpty(fileRequest.FileType))
                                 {
-                                    transaction.Rollback();
+                                    fileTransaction.Rollback();
                                     return BadRequest("Invalid file request data.");
                                 }
 
@@ -212,49 +221,58 @@ namespace FinanceLiquidityManager.Handler.Credit
 
                                 // Insert the file data
                                 var insertFileQuery = @"
-                            INSERT INTO files (FileInfo, FileType, FileName, RefID) 
-                            VALUES (@FileInfo, @FileType, @FileName, @RefID);
-                            SELECT LAST_INSERT_ID();
-                        ";
+                                    INSERT INTO finance.files (FileInfo, FileType, FileName, LoanID) 
+                                    VALUES (@FileInfo, 'L', @FileName, @LoanID);
+                                    SELECT LAST_INSERT_ID();
+                                ";
 
                                 var fileId = await connection.QuerySingleAsync<int>(insertFileQuery, new
                                 {
                                     FileInfo = fileRequest.FileInfo,
-                                    FileType = fileRequest.FileType,
                                     FileName = originalFileName,
-                                    RefID = loanId // Use the insuranceId as RefID for file association
-                                }, transaction: transaction);
+                                    LoanID = loanId // Use the loanId for file association
+                                }, transaction: fileTransaction);
 
                                 if (fileId <= 0)
                                 {
-                                    transaction.Rollback();
+                                    fileTransaction.Rollback();
                                     return BadRequest("Failed to upload one or more files.");
                                 }
                             }
 
-                            // No file uploaded case
-                            // Commit transaction for loan record insertion
-                            transaction.Commit();
-                            return Ok(new { LoanId = loanId, Message = "Loan and Files added successfully." });
+                            // Commit the file transaction after successful file insertions
+                            await fileTransaction.CommitAsync();
+
+                            return Ok(new { LoanId = loanId, Message = "Loan and files added successfully." });
                         }
                         catch (Exception ex)
                         {
-                            // Rollback the transaction in case of any failure
-                            transaction.Rollback();
+                            // Rollback the file transaction in case of any failure
+                            fileTransaction.Rollback();
                             // Log the exception details (ex.Message) for debugging purposes.
                             Console.WriteLine($"Exception: {ex.Message}");
                             return StatusCode(500, $"Unable To Process Request: {ex.Message}");
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                // Log the exception details (ex.Message) for debugging purposes.
-                Console.WriteLine($"Exception: {ex.Message}");
-                return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+                catch (Exception ex)
+                {
+                    // Rollback the loan transaction in case of any failure
+                    transaction.Rollback();
+                    // Log the exception details (ex.Message) for debugging purposes.
+                    Console.WriteLine($"Exception: {ex.Message}");
+                    return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+                }
             }
         }
+    }
+    catch (Exception ex)
+    {
+        // Log the exception details (ex.Message) for debugging purposes.
+        Console.WriteLine($"Exception: {ex.Message}");
+        return StatusCode(500, $"Unable To Process Request: {ex.Message}");
+    }
+}
 
 
 

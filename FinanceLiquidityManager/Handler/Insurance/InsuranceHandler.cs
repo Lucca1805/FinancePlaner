@@ -135,51 +135,68 @@ namespace FinanceLiquidityManager.Handler.Insurance
                             // Log the generated insuranceId
                             Console.WriteLine($"Generated InsuranceId: {insuranceId}");
 
-                            // Handle file uploads if FileRequests is provided and contains valid data
-                            foreach (var fileRequest in newInsurance.FileRequests)
+                            // Commit the insurance transaction first
+                            await transaction.CommitAsync();
+
+                            // Start a new transaction for file insertion
+                            using (var fileTransaction = connection.BeginTransaction())
                             {
-                                // Check if the necessary fields are present in the FileRequest object
-                                if (fileRequest == null || fileRequest.FileInfo == null || fileRequest.FileInfo.Length == 0 || string.IsNullOrEmpty(fileRequest.FileType))
+                                try
                                 {
-                                    transaction.Rollback();
-                                    return BadRequest("Invalid file request data.");
+                                    // Handle file uploads if FileRequests is provided and contains valid data
+                                    foreach (var fileRequest in newInsurance.FileRequests)
+                                    {
+                                        // Check if the necessary fields are present in the FileRequest object
+                                        if (fileRequest == null || fileRequest.FileInfo == null || fileRequest.FileInfo.Length == 0 || string.IsNullOrEmpty(fileRequest.FileType))
+                                        {
+                                            fileTransaction.Rollback();
+                                            return BadRequest("Invalid file request data.");
+                                        }
+
+                                        // Get and sanitize the file name (if available in FileRequest)
+                                        string originalFileName = string.IsNullOrEmpty(fileRequest.FileName) ? "Unknown_File" : fileRequest.FileName;
+
+                                        Console.WriteLine($"Original file name: {originalFileName}");
+
+                                        // Insert the file data
+                                        var insertFileQuery = @"
+                                    INSERT INTO finance.files (FileInfo, FileType, FileName, InsuranceID) 
+                                    VALUES (@FileInfo, 'I', @FileName, @InsuranceID);
+                                    SELECT LAST_INSERT_ID();
+                                ";
+
+                                        var fileId = await connection.QuerySingleAsync<int>(insertFileQuery, new
+                                        {
+                                            FileInfo = fileRequest.FileInfo,
+                                            FileName = originalFileName,
+                                            InsuranceID = insuranceId // Use the insuranceId for file association
+                                        }, transaction: fileTransaction);
+
+                                        if (fileId <= 0)
+                                        {
+                                            fileTransaction.Rollback();
+                                            return BadRequest("Failed to upload one or more files.");
+                                        }
+                                    }
+
+                                    // Commit the file transaction after successful file insertions
+                                    await fileTransaction.CommitAsync();
+
+                                    return Ok(new { InsuranceId = insuranceId, Message = "Insurance and files added successfully." });
                                 }
-
-                                // Get and sanitize the file name (if available in FileRequest)
-                                string originalFileName = string.IsNullOrEmpty(fileRequest.FileName) ? "Unknown_File" : fileRequest.FileName;
-
-                                Console.WriteLine($"Original file name: {originalFileName}");
-
-                                // Insert the file data
-                                var insertFileQuery = @"
-                            INSERT INTO files (FileInfo, FileType, FileName, RefID) 
-                            VALUES (@FileInfo, @FileType, @FileName, @RefID);
-                            SELECT LAST_INSERT_ID();
-                        ";
-
-                                var fileId = await connection.QuerySingleAsync<int>(insertFileQuery, new
+                                catch (Exception ex)
                                 {
-                                    FileInfo = fileRequest.FileInfo,
-                                    FileType = fileRequest.FileType,
-                                    FileName = originalFileName,
-                                    RefID = insuranceId // Use the insuranceId as RefID for file association
-                                }, transaction: transaction);
-
-                                if (fileId <= 0)
-                                {
-                                    transaction.Rollback();
-                                    return BadRequest("Failed to upload one or more files.");
+                                    // Rollback the file transaction in case of any failure
+                                    fileTransaction.Rollback();
+                                    // Log the exception details (ex.Message) for debugging purposes.
+                                    Console.WriteLine($"Exception: {ex.Message}");
+                                    return StatusCode(500, $"Unable To Process Request: {ex.Message}");
                                 }
                             }
-
-                            // Commit transaction after successful file insertions
-                            transaction.Commit();
-
-                            return Ok(new { InsuranceId = insuranceId, Message = "Insurance and files added successfully." });
                         }
                         catch (Exception ex)
                         {
-                            // Rollback the transaction in case of any failure
+                            // Rollback the insurance transaction in case of any failure
                             transaction.Rollback();
                             // Log the exception details (ex.Message) for debugging purposes.
                             Console.WriteLine($"Exception: {ex.Message}");

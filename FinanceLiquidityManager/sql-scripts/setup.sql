@@ -109,15 +109,16 @@ END */
 
 CREATE TABLE finance.files (
     FileId int AUTO_INCREMENT PRIMARY KEY,
-    FileInfo longblob  NOT NULL,
+    FileInfo longblob NOT NULL,
     FileType VARCHAR(1) NOT NULL,
     FileName varchar(50) NOT NULL,
-    RefID INT NOT NULL,
-    RefTable VARCHAR(10),
-    FOREIGN KEY (RefID) REFERENCES finance.loan(LoanId) on delete cascade,
-    FOREIGN KEY (RefID) REFERENCES finance.insurance(InsuranceId) on delete cascade,
-    CONSTRAINT CHK_FileType CHECK (FileType IN ('I', 'L'))  
+    LoanID INT,
+    InsuranceID INT,
+    CONSTRAINT CHK_FileType CHECK (FileType IN ('I', 'L')),
+    FOREIGN KEY (LoanID) REFERENCES finance.loan(LoanId) ON DELETE CASCADE,
+    FOREIGN KEY (InsuranceID) REFERENCES finance.insurance(InsuranceId) ON DELETE CASCADE
 );
+
 
 CREATE TABLE finance.standingOrders (
     OrderId INT AUTO_INCREMENT PRIMARY KEY,

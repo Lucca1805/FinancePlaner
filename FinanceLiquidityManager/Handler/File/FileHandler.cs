@@ -67,10 +67,32 @@ namespace FinanceLiquidityManager.Handler.File
 
                                 Console.WriteLine($"Original file name: {originalFileName}");
 
+                                // Determine if the CreditInsuranceID exists in the relevant table based on FileType
+                                string checkExistenceQuery;
+                                if (fileRequest.FileType == "I")
+                                {
+                                    checkExistenceQuery = "SELECT COUNT(*) FROM finance.insurance WHERE InsuranceId = @CreditInsuranceID";
+                                }
+                                else if (fileRequest.FileType == "L")
+                                {
+                                    checkExistenceQuery = "SELECT COUNT(*) FROM finance.loan WHERE LoanId = @CreditInsuranceID";
+                                }
+                                else
+                                {
+                                    return BadRequest("Invalid FileType. Must be 'I' for Insurance or 'L' for Loan.");
+                                }
+
+                                int existenceCount = await connection.ExecuteScalarAsync<int>(checkExistenceQuery, new { CreditInsuranceID }, transaction);
+                                if (existenceCount == 0)
+                                {
+                                    transaction.Rollback();
+                                    return BadRequest($"CreditInsuranceID {CreditInsuranceID} does not exist in the referenced table.");
+                                }
+
                                 // Insert the file data
                                 var insertQuery = @"
-                            INSERT INTO files (FileInfo, FileType, FileName, RefID) 
-                            VALUES (@FileInfo, @FileType, @FileName, @RefID);
+                            INSERT INTO finance.files (FileInfo, FileType, FileName, LoanID, InsuranceID) 
+                            VALUES (@FileInfo, @FileType, @FileName, @LoanID, @InsuranceID);
                             SELECT LAST_INSERT_ID();
                         ";
 
@@ -79,7 +101,8 @@ namespace FinanceLiquidityManager.Handler.File
                                     FileInfo = fileRequest.FileInfo,
                                     FileType = fileRequest.FileType,
                                     FileName = originalFileName,
-                                    RefID = CreditInsuranceID
+                                    LoanID = fileRequest.FileType == "L" ? CreditInsuranceID : (int?)null,
+                                    InsuranceID = fileRequest.FileType == "I" ? CreditInsuranceID : (int?)null
                                 }, transaction: transaction);
 
                                 if (fileId > 0)
@@ -151,6 +174,7 @@ namespace FinanceLiquidityManager.Handler.File
         }
 
 
+
         public async Task<ActionResult> GetFilesByCreditInsuranceIDAsync(int CreditInsuranceID, string FileType)
         {
             try
@@ -159,13 +183,36 @@ namespace FinanceLiquidityManager.Handler.File
                 {
                     await connection.OpenAsync();
 
-                    // Query to get all files for the given CreditInsuranceID
-                    var query = @"SELECT FileId, FileName FROM files WHERE RefID = @RefID and FileType= @FileType";
-                    var files = await connection.QueryAsync<FileResponse>(query, new { RefID = CreditInsuranceID, FileType = FileType });
+                    string query = string.Empty;
+
+                    if (FileType == "I")
+                    {
+                        // Query to get all files for the given InsuranceID and FileType
+                        query = @"
+                    SELECT FileId, FileName 
+                    FROM finance.files 
+                    WHERE InsuranceID = @CreditInsuranceID AND FileType = @FileType
+                ";
+                    }
+                    else if (FileType == "L")
+                    {
+                        // Query to get all files for the given LoanID and FileType
+                        query = @"
+                    SELECT FileId, FileName 
+                    FROM finance.files 
+                    WHERE LoanID = @CreditInsuranceID AND FileType = @FileType
+                ";
+                    }
+                    else
+                    {
+                        return BadRequest("Invalid FileType. Must be 'I' for Insurance or 'L' for Loan.");
+                    }
+
+                    var files = await connection.QueryAsync<FileResponse>(query, new { CreditInsuranceID, FileType });
 
                     if (files == null || !files.Any())
                     {
-                        return NotFound("No files found for the given CreditInsuranceID.");
+                        return NotFound("No files found for the given ID and FileType.");
                     }
 
                     return Ok(files);
@@ -185,6 +232,7 @@ namespace FinanceLiquidityManager.Handler.File
             }
         }
 
+
         public async Task<ActionResult> RemoveFileAsync(int CreditInsuranceID, string FileName)
         {
             try
@@ -199,9 +247,15 @@ namespace FinanceLiquidityManager.Handler.File
                 {
                     await connection.OpenAsync();
 
-                    // Check if the file exists and belongs to the specified CreditInsuranceID
                     string checkFileQuery = @"
-                SELECT COUNT(*) FROM finance.files WHERE RefID = @CreditInsuranceID and FileName = @FileName;
+                SELECT COUNT(*) 
+                FROM finance.files 
+                WHERE (InsuranceID = @CreditInsuranceID OR LoanID = @CreditInsuranceID) AND FileName = @FileName;
+            ";
+
+                    string deleteFileQuery = @"
+                DELETE FROM finance.files 
+                WHERE (InsuranceID = @CreditInsuranceID OR LoanID = @CreditInsuranceID) AND FileName = @FileName;
             ";
 
                     // ExecuteScalarAsync will return the count directly
@@ -213,9 +267,6 @@ namespace FinanceLiquidityManager.Handler.File
                     }
 
                     // Delete the file
-                    string deleteFileQuery = @"DELETE FROM finance.files WHERE RefID = @CreditInsuranceID and FileName = @FileName";
-
-                    // Use an anonymous object to pass parameters
                     await connection.ExecuteAsync(deleteFileQuery, new { CreditInsuranceID, FileName });
 
                     return Ok($"File '{FileName}' deleted successfully.");
