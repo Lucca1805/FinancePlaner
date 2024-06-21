@@ -303,7 +303,7 @@ public async Task<ActionResult> AddLoan(string userId, [FromBody] LoanModelCreat
                         try
                         {
                             // Delete dependent records in the files table
-                            string deleteFilesQuery = @"DELETE FROM finance.files WHERE RefID = @LoanId";
+                            string deleteFilesQuery = @"DELETE FROM finance.files WHERE LoanID = @LoanId";
                             await connection.ExecuteAsync(deleteFilesQuery, new { LoanId = loanId }, transaction);
 
                             // Delete the credit record
