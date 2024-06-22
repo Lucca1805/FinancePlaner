@@ -366,11 +366,11 @@ namespace FinanceLiquidityManager.Handler.Insurance
                         try
                         {
                             // Delete dependent records in the files table
-                            string deleteFilesQuery = @"DELETE FROM finance.files WHERE RefID = @InsuranceId";
+                            string deleteFilesQuery = @"DELETE FROM finance.files WHERE InsuranceID = @InsuranceId";
                             await connection.ExecuteAsync(deleteFilesQuery, new { InsuranceId = insuranceId }, transaction);
 
                             // Delete the credit record
-                            string deleteCreditQuery = @"DELETE FROM finance.insurance WHERE InsuranceId = @InsuranceId";
+                            string deleteCreditQuery = @"DELETE FROM finance.insurance WHERE InsuranceID = @InsuranceId";
                             var affectedRows = await connection.ExecuteAsync(deleteCreditQuery, new { InsuranceId = insuranceId }, transaction);
 
                             // Commit the transaction if successful
