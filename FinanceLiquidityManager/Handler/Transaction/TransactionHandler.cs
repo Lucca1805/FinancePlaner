@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using System.ComponentModel.DataAnnotations;
+using System.Xml.Linq;
 
 namespace FinanceLiquidityManager.Handler.Transaction
 {
@@ -55,17 +56,16 @@ namespace FinanceLiquidityManager.Handler.Transaction
                     return Ok(new List<Transaction>());
                 }
 
-
-                // Fetch insurances for each AccountId
-
+                // Prepare the query with placeholders for dynamic parameters
                 var queryBuilder = new StringBuilder(@"SELECT t.TransactionId, t.AccountId, t.AmountCurrency, t.TransactionIssuer, t.TransactionInformation, t.Amount, t.ExchangeRate, t.UnitCurrency, t.SupplementaryData, t.BookingDateTime, t.MerchantName,
-                                                             b.BankId, b.bic FROM finance.transactions t
-                                                            INNER JOIN finance.bank_account ba ON t.AccountId = ba.AccountId
-                                                            INNER JOIN finance.bank b ON ba.BankId = b.BankId order by t.BookingDateTime");
+                                                 b.BankId, b.bic FROM finance.transactions t
+                                                INNER JOIN finance.bank_account ba ON t.AccountId = ba.AccountId
+                                                INNER JOIN finance.bank b ON ba.BankId = b.BankId
+                                                WHERE t.AccountId IN @AccountIds");
 
                 if (!string.IsNullOrEmpty(request.FreeText))
                 {
-                    queryBuilder.Append(" AND (t.TransactionInformation LIKE @FreeText)");
+                    queryBuilder.Append(" AND t.TransactionInformation LIKE @FreeText");
                 }
                 if (!string.IsNullOrEmpty(request.Iban))
                 {
@@ -73,7 +73,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 }
                 if (request.Accounts != null && request.Accounts.Any())
                 {
-                    queryBuilder.Append(" AND t.AccountId = @Accounts");
+                    queryBuilder.Append(" AND t.AccountId IN @RequestAccounts");
                 }
                 if (request.DateFrom.HasValue)
                 {
@@ -84,21 +84,23 @@ namespace FinanceLiquidityManager.Handler.Transaction
                     request.DateTo = request.DateTo.Value.AddDays(1);
                     queryBuilder.Append(" AND t.BookingDateTime <= @DateTo");
                 }
+
+                queryBuilder.Append(" ORDER BY t.BookingDateTime");
+
                 var transactions = await connection.QueryAsync<TransactionResponse>(queryBuilder.ToString(), new
                 {
+                    AccountIds = accountIds.ToList(),
                     FreeText = $"%{request.FreeText}%",
                     request.Iban,
+                    RequestAccounts = request.Accounts,
                     request.DateFrom,
-                    request.DateTo,
-                    request.Accounts,
-                    accountIds,
+                    request.DateTo
                 });
+
                 foreach (TransactionResponse res in transactions)
                 {
                     if (res.AmountCurrency != Currency)
                     {
-                        /*res.Amount = CurrencyConverter.Convert(Currency, res.AmountCurrency, res.Amount);
-                        res.AmountCurrency = Currency;*/
                         decimal convertedCosts = await ConvertCurrency((decimal)res.Amount, res.AmountCurrency, Currency);
                         res.Amount = (double)Math.Round(convertedCosts, 2);
                         res.AmountCurrency = Currency;
@@ -108,6 +110,11 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 return Ok(transactions);
             }
         }
+
+
+
+
+
 
         public async Task<ActionResult> GetAreaValueChartData(string userId, TransactionAreaChartModelRequest request, string Currency)
         {
@@ -120,10 +127,28 @@ namespace FinanceLiquidityManager.Handler.Transaction
             {
                 Accounts = new Dictionary<string, Account>()
             };
-
             DateTime adjustedDateTo = request.dateTo?.AddDays(1).Date ?? DateTime.MinValue;
+            List<string> accountIds = request.account;
 
-            foreach (string accountId in request.account)
+            // If no account IDs are provided in the request, get all default account IDs for the user
+            if (accountIds == null || !accountIds.Any())
+            {
+                try
+                {
+                    using (var connection = new MySqlConnection(connectionString))
+                    {
+                        string getAllAccountsQuery = "SELECT AccountId FROM finance.accounts WHERE Name = @Name";
+                        accountIds = (await connection.QueryAsync<string>(getAllAccountsQuery, new { Name = userId })).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "An error occurred while retrieving default account IDs.");
+                    return new StatusCodeResult(500);
+                }
+            }
+
+            foreach (string accountId in accountIds)
             {
                 var acc = new Account
                 {
@@ -132,14 +157,14 @@ namespace FinanceLiquidityManager.Handler.Transaction
                 };
 
                 string query = @"
-            SELECT 
-                DATE(BookingDateTime) as Date, 
-                SUM(BalanceAmount) as Value, 
-                BalanceCurrency as Currency 
-            FROM finance.transactions 
-            WHERE AccountId = @AccountId 
-              AND DATE(BookingDateTime) BETWEEN @dateFrom AND @dateTo
-            GROUP BY DATE(BookingDateTime), BalanceCurrency";
+        SELECT 
+            DATE(BookingDateTime) as Date, 
+            SUM(BalanceAmount) as Value, 
+            BalanceCurrency as Currency 
+        FROM finance.transactions 
+        WHERE AccountId = @AccountId 
+          AND DATE(BookingDateTime) BETWEEN @dateFrom AND @dateTo
+        GROUP BY DATE(BookingDateTime), BalanceCurrency";
 
                 try
                 {
@@ -151,8 +176,6 @@ namespace FinanceLiquidityManager.Handler.Transaction
                         {
                             if (accData.Currency != Currency)
                             {
-                                /*accData.Value = CurrencyConverter.Convert(Currency, accData.Currency, accData.Value);
-                                accData.Currency = Currency;*/
                                 decimal convertedCosts = await ConvertCurrency((decimal)accData.Value, accData.Currency, Currency);
                                 accData.Value = (double)Math.Round(convertedCosts, 2);
                                 accData.Currency = Currency;
@@ -172,7 +195,6 @@ namespace FinanceLiquidityManager.Handler.Transaction
 
             return Ok(response);
         }
-
 
         public async Task<ActionResult> GetExpenseRevenueChartData(string userId, TransactionAreaChartModelRequest request, string Currency)
         {
@@ -292,7 +314,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
     {
         public string? freeText { get; set; }
         public string? iban { get; set; }
-        public string[] account { get; set; }
+        public List<string> account { get; set; }
         public DateTime? dateFrom { get; set; }
         public DateTime? dateTo { get; set; }
         //public Transactiontype? type { get; set; }
@@ -307,6 +329,7 @@ namespace FinanceLiquidityManager.Handler.Transaction
         public double revenue { get; set; }
         public string currency { get; set; }
     }
+
 
     public class TransactionExepenseRevenueModel
     {
